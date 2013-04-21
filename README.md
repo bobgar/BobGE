@@ -16,9 +16,9 @@ WebGL Utils (Copyright 2010, Google Inc.)
 
 ***************************************
 TODOs and planned work:
-*  Global registries game objects, and texture assets.
+*  Global registry for texture assets.
 *  basic lighting
-*  input framework
+*  mopuse input framework
 *  camera model
 *  find or implement a model importer
 *  find / integrate bulk loader.  Figure out texture / js / ect. load process

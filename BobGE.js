@@ -16,8 +16,10 @@ var BobGE = Class.extend(
 		//set last render and update times to 0 so they happen immedately
 		this.lastRenderTime = 0;
 		this.lastUpdateTime = 0;
-		//initialze the array to hold game objects
+		//initialize the dictionary to hold game objects
 		this.objects = new Object();
+		//initialize the 
+		this.textures = new Object();
 		//Attempt to start up WebGL
 		try {
 			this.gl = canvas.getContext("experimental-webgl");
@@ -52,11 +54,11 @@ var BobGE = Class.extend(
 	**/
 	addObject: function(o)
 	{
-		this.objects[this.objects.id] = o;
+		this.objects[o.id] = o;
 	},
 	removeObject: function(o)
 	{
-		delete this.objects[this.objects.id];
+		delete this.objects[o.id];
 	},
 	/**
 	*  getShader is a helper function used to find and compile the vertex and fragment shaders
@@ -182,7 +184,7 @@ var BobGE = Class.extend(
 			{
 				var component = obj.components[j];
 				if(component.draw )
-				{				
+				{
 					log("drawing component on " + obj.id, 3);
 					component.draw(mvMatrix, pMatrix);					
 				}

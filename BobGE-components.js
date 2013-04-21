@@ -26,27 +26,27 @@ var ConstantRotationComponent = Component.extend({
 	{
 		if (BobGE.inst.keysDown[33]) {
 		  // Page Up
-		  this.owner.position[2] -= 0.05;
+		  this.owner.position[2] -= 0.1;
 		}
 		if (BobGE.inst.keysDown[34]) {
 		  // Page Down
-		  this.owner.position[2] += 0.05;
+		  this.owner.position[2] += 0.1;
 		}
 		if (BobGE.inst.keysDown[37]) {
 		  // Left cursor key
-		  this.y -= 1;
+		  this.y -= .1;
 		}
 		if (BobGE.inst.keysDown[39]) {
 		  // Right cursor key
-		  this.y += 1;
+		  this.y += .1;
 		}
 		if (BobGE.inst.keysDown[38]) {
 		  // Up cursor key
-		  this.x -= 1;
+		  this.x -= .1;
 		}
 		if (BobGE.inst.keysDown[40]) {
 		  // Down cursor key
-		  this.x += 1;
+		  this.x += .1;
 		}
 	
 		//calculate percentage of a second that has passed
@@ -55,12 +55,16 @@ var ConstantRotationComponent = Component.extend({
 		quat.rotateX(this.owner.rotation, this.owner.rotation, this.x * p);		
 		quat.rotateY(this.owner.rotation, this.owner.rotation, this.y * p);
 		quat.rotateZ(this.owner.rotation, this.owner.rotation, this.z * p);
+		
+		this.x *= .99;
+		this.y *= .99;
+		this.z *= .99;
 	}
 });
 
 var TexturedMeshComponent = Component.extend({
 	init: function(x, y, z)
-	{	
+	{
 		this._super();
 		this.vertexBuffer = this.gl.createBuffer();
 		this.uvBuffer = this.gl.createBuffer();
@@ -103,9 +107,15 @@ var TexturedMeshComponent = Component.extend({
 	loadTexture: function(tex)
 	{
 		log("load tex");
+		if(BobGE.inst.textures[tex])
+		{
+			this.texture = BobGE.inst.textures[tex];
+			return;
+		}
 		this.texture.image = new Image();
 		this.texture.image.onload = this.textureLoaded.bind(this);
 		this.texture.image.src = tex;  
+		BobGE.inst.textures[tex] = this.texture;		
 	},
 	textureLoaded: function()
 	{	
@@ -117,6 +127,7 @@ var TexturedMeshComponent = Component.extend({
 		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR_MIPMAP_NEAREST);
 		this.gl.generateMipmap(this.gl.TEXTURE_2D);
 		this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+		this.texture.loaded = true;
 	}
 });
 
