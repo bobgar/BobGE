@@ -19,10 +19,36 @@ var ConstantRotationComponent = Component.extend({
 		//set rotations with defaulting
 		this.x = typeof x != 'undefined' ? x : 0;
 		this.y = typeof x != 'undefined' ? y : 0;
-		this.z = typeof x != 'undefined' ? z : 0;
+		this.z = typeof x != 'undefined' ? z : 0;		
+		//document.onkeyup = handleKeyUp.bind(this);
 	},
 	update: function(elapsed)
 	{
+		if (BobGE.inst.keysDown[33]) {
+		  // Page Up
+		  this.owner.position[2] -= 0.05;
+		}
+		if (BobGE.inst.keysDown[34]) {
+		  // Page Down
+		  this.owner.position[2] += 0.05;
+		}
+		if (BobGE.inst.keysDown[37]) {
+		  // Left cursor key
+		  this.y -= 1;
+		}
+		if (BobGE.inst.keysDown[39]) {
+		  // Right cursor key
+		  this.y += 1;
+		}
+		if (BobGE.inst.keysDown[38]) {
+		  // Up cursor key
+		  this.x -= 1;
+		}
+		if (BobGE.inst.keysDown[40]) {
+		  // Down cursor key
+		  this.x += 1;
+		}
+	
 		//calculate percentage of a second that has passed
 		var p = elapsed / 1000.0 ;
 		//apply the appropriate amoutn of rotation based on elapsed time.
@@ -88,7 +114,8 @@ var TexturedMeshComponent = Component.extend({
 		this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
 		this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.texture.image);
 		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
-		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR_MIPMAP_NEAREST);
+		this.gl.generateMipmap(this.gl.TEXTURE_2D);
 		this.gl.bindTexture(this.gl.TEXTURE_2D, null);
 	}
 });

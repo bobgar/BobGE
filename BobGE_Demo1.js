@@ -11,7 +11,7 @@ function webGLStart()
 	c.loadTexture("assets/Dirt.jpg");	
 	go.addComponent( c );
 	log(c);
-	go.addComponent( new ConstantRotationComponent(.6,.4,.5) );	
+	go.addComponent( new ConstantRotationComponent(0,0,0) );	
 	bobGE.addObject(go);		
 	log(go);	
 }

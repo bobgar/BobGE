@@ -16,7 +16,6 @@ WebGL Utils (Copyright 2010, Google Inc.)
 
 ***************************************
 TODOs and planned work:
-*  Cleanup, comments, refactoring.
 *  Global registries game objects, and texture assets.
 *  basic lighting
 *  input framework

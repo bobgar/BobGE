@@ -31,9 +31,21 @@ var BobGE = Class.extend(
 		
 		this.initShaders();
 		
+		this.keysDown = new Object();
+		document.onkeydown = this.keyDown.bind(this);
+		document.onkeyup = this.keyUp.bind(this);
+		
 		//This call starts the update loop		
 		this.update();
 		log("BobGE init complete");
+	},
+	keyDown: function(event)
+	{
+		this.keysDown[event.keyCode] = true;
+	},
+	keyUp: function(event)
+	{
+		this.keysDown[event.keyCode] = false;
 	},
 	/**
 	*  Add an object to the game engine for rendering / update.
