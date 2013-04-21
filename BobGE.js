@@ -5,12 +5,20 @@ var BobGE = Class.extend(
 {
 	init: function(canvas) 
 	{	
+		//The game engine should be a singleton!
+		//If it has alraedy been initialized, return the original copy!
 		if ( BobGE.inst )
 			return BobGE.inst;
 		BobGE.inst = this;
-	
-		this.objects = new Array();	
-
+		
+		//set up the default framerate in miliseconds
+		this.maxFramerate = 1000.0 / 60.0; 
+		//set last render and update times to 0 so they happen immedately
+		this.lastRenderTime = 0;
+		this.lastUpdateTime = 0;
+		//initialze the array to hold game objects
+		this.objects = new Object();
+		//Attempt to start up WebGL
 		try {
 			this.gl = canvas.getContext("experimental-webgl");
 			this.gl.viewportWidth = canvas.width;
@@ -23,33 +31,35 @@ var BobGE = Class.extend(
 		
 		this.initShaders();
 		
-		//this.intervalId = setInterval(this.update, 66);
-		//clearInterval(this._intervalId);		
-		
+		//This call starts the update loop		
 		this.update();
 		log("BobGE init complete");
 	},
+	/**
+	*  Add an object to the game engine for rendering / update.
+	**/
 	addObject: function(o)
 	{
-		log("add cube");
-		this.objects[this.objects.length] = o;
+		this.objects[this.objects.id] = o;
 	},
+	removeObject: function(o)
+	{
+		delete this.objects[this.objects.id];
+	},
+	/**
+	*  getShader is a helper function used to find and compile the vertex and fragment shaders
+	**/
 	getShader: function(id) {
 		log("Get Shaders!");
+		//Assume the shaders we're looking for are on the main dom object.  Get them by ID
 		var shaderScript = document.getElementById(id);
+		//If not found, return null
 		if (!shaderScript) {
 			log("Shader not found: " + id);
 			return null;
 		}
-		var str = "";
-		var k = shaderScript.firstChild;
-		while (k) {
-			if (k.nodeType == 3) {
-				str += k.textContent;
-			}
-			k = k.nextSibling;
-		}
 		var shader;
+		//Figure out what kind of shader we have, and create the type appropriately
 		if (shaderScript.type == "x-shader/x-fragment") {
 			log("Found Fragment Shader!");
 			shader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
@@ -59,6 +69,16 @@ var BobGE = Class.extend(
 		} else {		
 			return null;
 		}
+		//strip out unnecessary bits from the source.
+		var str = "";
+		var k = shaderScript.firstChild;
+		while (k) {
+			if (k.nodeType == 3) {
+				str += k.textContent;
+			}
+			k = k.nextSibling;
+		}
+		//define the source and compile the shader
 		this.gl.shaderSource(shader, str);
 		this.gl.compileShader(shader);
 		if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
@@ -99,20 +119,29 @@ var BobGE = Class.extend(
 	**/
 	update: function()
 	{
+		var curTime = new Date();
+		var elapsed = curTime - this.lastUpdateTime;		
+		
 		//set up next update call
 		requestAnimFrame( this.update.bind(this) );	
 		//Update components
-		for(var i = 0; i < this.objects.length; ++i)
+		for(var k in this.objects)
 		{
-			var obj = this.objects[i];	
+			var obj = this.objects[k];	
 			for(var j = 0; j < obj.components.length; ++j)
 			{
 				var component = obj.components[j];
-				component.update();
+				component.update(elapsed);
 			}
 		}
-		//Draw the scene
-		this.drawScene();
+		this.lastUpdateTime = curTime;				
+		//check the time since last render against our (maximum) framerate.
+		if(curTime - this.lastRenderTime > this.maxFramerate)
+		{
+			this.lastRenderTime = curTime;
+			//Draw the scene
+			this.drawScene();
+		}
 	},
 	
 	/**
@@ -134,38 +163,27 @@ var BobGE = Class.extend(
 		//Generate the perspective matrix
 		mat4.perspective(pMatrix, 45, this.gl.viewportWidth / this.gl.viewportHeight, 0.1, 100.0);
 		//log("num objects = "+this.objects.length);
-		for(var i = 0; i < this.objects.length; ++i)
-		{		
-			var obj = this.objects[i];	
-			//Generate the 4x4 matrix representing position / rotation
-			//TODO this should be cached on the object and only updated when rotated
-			//(moves can be done easily by hand, and updating this every draw will be expensive).
-			mat4.fromRotationTranslation(mvMatrix, obj.rotation, obj.position);	
-			//load the objects vertex buffer into memory
-			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, obj.vertexBuffer);
-			this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, obj.vertexBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
-			
-			//load the objects UV map into memory
-			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, obj.uvBuffer);
-			this.gl.vertexAttribPointer(this.shaderProgram.textureCoordAttribute, obj.uvBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
-			
-			//load the objects texture into memory
-			this.gl.activeTexture(this.gl.TEXTURE0);
-			this.gl.bindTexture(this.gl.TEXTURE_2D, obj.texture);
-			this.gl.uniform1i(this.shaderProgram.samplerUniform, 0);
-			
-			//load the objects triangle buffer into memory
-			this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, obj.triangleBuffer);
-			//Load the matricies into the shaders
-			this.gl.uniformMatrix4fv(this.shaderProgram.pMatrixUniform, false, pMatrix);
-			this.gl.uniformMatrix4fv(this.shaderProgram.mvMatrixUniform, false, mvMatrix);
-			//Draw the object
-			this.gl.drawElements(this.gl.TRIANGLES, obj.triangleBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
+		for(var k in this.objects)
+		{
+			var obj = this.objects[k];
+			for(var j = 0; j < obj.components.length; ++j)
+			{
+				var component = obj.components[j];
+				if(component.draw )
+				{				
+					log("drawing component on " + obj.id, 3);
+					component.draw(mvMatrix, pMatrix);					
+				}
+			}
 		}
 	}
 });
 
-function log(s)
+var logLevel = 2;
+function log(s, l)
 {
-	console.log(s);
+	l = typeof l != 'undefined' ? l : 2;
+	//Only log if the level of the curren message is lower (higher prio) than the log level.
+	if(l <= logLevel)
+		console.log(s);
 }

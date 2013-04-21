@@ -16,6 +16,8 @@ WebGL Utils (Copyright 2010, Google Inc.)
 
 ***************************************
 TODOs and planned work:
+*  Cleanup, comments, refactoring.
+*  Global registries game objects, and texture assets.
 *  basic lighting
 *  input framework
 *  camera model
@@ -24,5 +26,6 @@ TODOs and planned work:
 *  find / integrate 3D physics engine (jig lib?)
 *  create scene storage / load mechanism (xml?  db?)
 *  work on cool demos
+*  multiple shader support, global registry for shaders.
 
 ###############################
