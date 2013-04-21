@@ -3,32 +3,39 @@
 		<script id="shader-fs" type="x-shader/x-fragment">
 			precision mediump float;
 
+			varying vec2 vTextureCoord;
+
+			uniform sampler2D uSampler;
+
 			void main(void) {
-				gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+				gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
 			}
 		</script>
 
 		<script id="shader-vs" type="x-shader/x-vertex">
 			attribute vec3 aVertexPosition;
+			attribute vec2 aTextureCoord;
 
 			uniform mat4 uMVMatrix;
 			uniform mat4 uPMatrix;
 
+			varying vec2 vTextureCoord;
+
+
 			void main(void) {
 				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+				vTextureCoord = aTextureCoord;
 			}
 		</script>
 		
 		<script type="text/javascript" src="SimpleJavascriptInheritance.js"></script>
 		<script type="text/javascript" src="gl-matrix-min.js"></script>
+		<script type="text/javascript" src="webgl-utils.js"></script>
 		
 		<script type="text/javascript" src="BobGE.js"></script>		
 		<script type="text/javascript" src="BobGE-objects.js"></script>
 		<script type="text/javascript" src="BobGE-components.js"></script>
-		<script type="text/javascript" src="BobGE_Demo1.js"></script>	
-		
-		
-</script>
+		<script type="text/javascript" src="BobGE_Demo1.js"></script>			
 	</head>
 
 	<body onload="webGLStart();">  

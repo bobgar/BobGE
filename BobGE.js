@@ -23,8 +23,10 @@ var BobGE = Class.extend(
 		
 		this.initShaders();
 		
-		this.intervalId = setInterval(this.update, 66);
+		//this.intervalId = setInterval(this.update, 66);
 		//clearInterval(this._intervalId);		
+		
+		this.update();
 		log("BobGE init complete");
 	},
 	addObject: function(o)
@@ -83,54 +85,85 @@ var BobGE = Class.extend(
 
 		this.shaderProgram.vertexPositionAttribute = this.gl.getAttribLocation(this.shaderProgram, "aVertexPosition");
 		this.gl.enableVertexAttribArray(this.shaderProgram.vertexPositionAttribute);
+		
+		this.shaderProgram.textureCoordAttribute = this.gl.getAttribLocation(this.shaderProgram, "aTextureCoord");
+        this.gl.enableVertexAttribArray(this.shaderProgram.textureCoordAttribute);
 
 		this.shaderProgram.pMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uPMatrix");
 		this.shaderProgram.mvMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uMVMatrix");
+		this.shaderProgram.samplerUniform = this.gl.getUniformLocation(this.shaderProgram, "uSampler");
 	},
+	
+	/**
+	*  Main update loop of the game.
+	**/
 	update: function()
 	{
-		var bge = BobGE.inst;
-		for(var i = 0; i < bge.objects.length; ++i)
+		//set up next update call
+		requestAnimFrame( this.update.bind(this) );	
+		//Update components
+		for(var i = 0; i < this.objects.length; ++i)
 		{
-			var obj = bge.objects[i];	
+			var obj = this.objects[i];	
 			for(var j = 0; j < obj.components.length; ++j)
 			{
 				var component = obj.components[j];
 				component.update();
 			}
 		}
-		bge.drawScene();
+		//Draw the scene
+		this.drawScene();
 	},
+	
+	/**
+	*  Draw the entire object list.
+	*  TODO:  Draw method should be on drawable components.
+	*  Not every object will be drawable, or drawable in the same way.
+	*  Though hopefully many will be similar.
+	**/
 	drawScene: function() 
 	{
-		this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
-		this.gl.enable(bobGE.gl.DEPTH_TEST);	
-		//log("draw scene");
-		//var mvMatrix = mat4.create();		
+		//Clear the screen and reset the depth budffer before drawin the game world
+		this.gl.clearColor(0.5, 0.5, 0.5, 1.0);
+		this.gl.enable(this.gl.DEPTH_TEST);			
+		//Create the temp matricies to hold object positions.
 		var mvMatrix = mat4.create();
 		var pMatrix = mat4.create();
 		this.gl.viewport(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-
+		//Generate the perspective matrix
 		mat4.perspective(pMatrix, 45, this.gl.viewportWidth / this.gl.viewportHeight, 0.1, 100.0);
 		//log("num objects = "+this.objects.length);
 		for(var i = 0; i < this.objects.length; ++i)
 		{		
 			var obj = this.objects[i];	
-			//log(obj);			
-			mat4.fromRotationTranslation(mvMatrix, obj.rotation, obj.position);			
-			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, obj.buffer);
-			this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, obj.buffer.itemSize, this.gl.FLOAT, false, 0, 0);
+			//Generate the 4x4 matrix representing position / rotation
+			//TODO this should be cached on the object and only updated when rotated
+			//(moves can be done easily by hand, and updating this every draw will be expensive).
+			mat4.fromRotationTranslation(mvMatrix, obj.rotation, obj.position);	
+			//load the objects vertex buffer into memory
+			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, obj.vertexBuffer);
+			this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, obj.vertexBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
 			
+			//load the objects UV map into memory
+			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, obj.uvBuffer);
+			this.gl.vertexAttribPointer(this.shaderProgram.textureCoordAttribute, obj.uvBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
+			
+			//load the objects texture into memory
+			this.gl.activeTexture(this.gl.TEXTURE0);
+			this.gl.bindTexture(this.gl.TEXTURE_2D, obj.texture);
+			this.gl.uniform1i(this.shaderProgram.samplerUniform, 0);
+			
+			//load the objects triangle buffer into memory
+			this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, obj.triangleBuffer);
+			//Load the matricies into the shaders
 			this.gl.uniformMatrix4fv(this.shaderProgram.pMatrixUniform, false, pMatrix);
 			this.gl.uniformMatrix4fv(this.shaderProgram.mvMatrixUniform, false, mvMatrix);
-			
-			this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, obj.buffer.numItems);
+			//Draw the object
+			this.gl.drawElements(this.gl.TRIANGLES, obj.triangleBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
 		}
 	}
 });
-
-
 
 function log(s)
 {
