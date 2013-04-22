@@ -32,15 +32,27 @@ var BobGE = Class.extend(
 		}
 		
 		this.initShaders();
+		this.initCamera();
 		
 		this.keysDown = new Object();
 		document.onkeydown = this.keyDown.bind(this);
 		document.onkeyup = this.keyUp.bind(this);
 		
+		canvas.onmousedown = this.mouseDown.bind(this);
+		document.onmouseup = this.mouseUp.bind(this);
+		document.onmousemove = this.mouseMove.bind(this);		
+		
+		//Mouse deltas should start at 0
+		this.mouseDeltaX = 0;
+		this.mouseDeltaY = 0;
+		
 		//This call starts the update loop		
 		this.update();
 		log("BobGE init complete");
 	},
+	/**
+	*  Keyboard handlers
+	**/
 	keyDown: function(event)
 	{
 		this.keysDown[event.keyCode] = true;
@@ -48,6 +60,27 @@ var BobGE = Class.extend(
 	keyUp: function(event)
 	{
 		this.keysDown[event.keyCode] = false;
+	},
+	/**
+	*  Mouse Handlers
+	**/
+	mouseDown: function(event)
+	{
+	},
+	mouseUp: function(event)
+	{
+	},
+	mouseMove: function(event)
+	{		
+		var newX = event.clientX;
+		var newY = event.clientY;
+		//TODO slow / dumb to do this every mouse move.
+		this.lastMouseX = typeof this.lastMouseX != 'undefined' ? this.lastMouseX : newX;
+		this.lastMouseY = typeof this.lastMouseY != 'undefined' ? this.lastMouseY : newY;
+		this.mouseDeltaX = newX - this.lastMouseX;
+		this.mouseDeltaY = newY - this.lastMouseY;
+		this.lastMouseX = newX;
+		this.lastMouseY = newY;
 	},
 	/**
 	*  Add an object to the game engine for rendering / update.
@@ -59,6 +92,16 @@ var BobGE = Class.extend(
 	removeObject: function(o)
 	{
 		delete this.objects[o.id];
+	},
+	/**
+	*	This function initializes the default main camera.
+	*   The main camera is just a game object and a special component
+	**/
+	initCamera: function()
+	{
+		this.mainCamera = new GameObject("mainCamera");		
+		this.mainCamera.addComponent(new BasicCameraController());
+		this.addObject(this.mainCamera);
 	},
 	/**
 	*  getShader is a helper function used to find and compile the vertex and fragment shaders
@@ -156,6 +199,9 @@ var BobGE = Class.extend(
 			//Draw the scene
 			this.drawScene();
 		}
+		
+		this.mouseDeltaX = 0;
+		this.mouseDeltaY = 0;
 	},
 	
 	/**
@@ -175,7 +221,7 @@ var BobGE = Class.extend(
 		this.gl.viewport(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 		//Generate the perspective matrix
-		mat4.perspective(pMatrix, 45, this.gl.viewportWidth / this.gl.viewportHeight, 0.1, 100.0);
+		mat4.perspective(pMatrix, 45, this.gl.viewportWidth / this.gl.viewportHeight, 0.1, 100.0);		
 		//log("num objects = "+this.objects.length);
 		for(var k in this.objects)
 		{

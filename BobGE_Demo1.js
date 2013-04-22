@@ -11,7 +11,7 @@ function webGLStart()
 	c.loadTexture("assets/Dirt.jpg");	
 	go.addComponent( c );
 	log(c);
-	go.addComponent( new ConstantRotationComponent(0,0,0) );	
+	go.addComponent( new ConstantRotationComponent(.06,.05,.04) );	
 	bobGE.addObject(go);	
 	log(go);	
 
@@ -28,6 +28,7 @@ function webGLStart()
 	go3.position[0] = 3;
 	var c3 = new TexturedCubeComponent();
 	c3.loadTexture("assets/Grass.jpg");	
+	go3.addComponent( new ConstantRotationComponent(-.06,-.05,-.04) );	
 	go3.addComponent( c3 );	
 	bobGE.addObject(go3);
 }
