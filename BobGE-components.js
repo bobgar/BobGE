@@ -15,7 +15,7 @@ var BasicCameraController = Component.extend(
 	{
 		this.pitch = 0;
 		this.yaw = 0;
-		this.speed = .1;
+		this.speed = 1;
 		this._super();
 	},
 	update: function()
@@ -33,7 +33,7 @@ var BasicCameraController = Component.extend(
 		{
 			var movement = vec3.fromValues(0, 0, -1);
 			vec4.transformQuat(movement, movement, q);
-			vec4.scale(movement, movement, this.speed);
+			//vec4.scale(movement, movement, this.speed);
 			vec4.add(this.owner.position, this.owner.position, movement);
 		}
 		if (BobGE.inst.keysDown[65]) 
@@ -100,19 +100,11 @@ var ConstantRotationComponent = Component.extend({
 	},
 	update: function(elapsed)
 	{
-		if (BobGE.inst.keysDown[33]) {
-		  // Page Up
-		  this.owner.position[2] -= 0.1;
-		}
-		if (BobGE.inst.keysDown[34]) {
-		  // Page Down
-		  this.owner.position[2] += 0.1;
-		}
-		
 		//apply the appropriate amoutn of rotation based on elapsed time.
-		quat.rotateX(this.owner.rotation, this.owner.rotation, this.x);		
+		quat.rotateX(this.owner.rotation, this.owner.rotation, this.x);				
 		quat.rotateY(this.owner.rotation, this.owner.rotation, this.y);
-		quat.rotateZ(this.owner.rotation, this.owner.rotation, this.z);		
+		quat.rotateZ(this.owner.rotation, this.owner.rotation, this.z);	
+		this.owner.dirty = true;
 	}
 });
 
@@ -127,9 +119,21 @@ var TexturedMeshComponent = Component.extend({
 		
 		this.scale = vec3.create();
 		this.scale[0] = 1; this.scale[1] = 1; this.scale[2] = 1;
+		
+		this.cachedMat = mat4.create();						
+	},
+	updateCachedMat: function()
+	{
+		mat4.fromRotationTranslation(this.cachedMat, this.owner.rotation,  this.owner.position);
+		mat4.scale(this.cachedMat, this.cachedMat, this.scale);
 	},
 	update: function(elapsed)
 	{
+		if(this.owner.dirty)
+		{
+			this.updateCachedMat();
+			this.owner.dirty = false;
+		}
 	},
 	draw: function(mvMatrix, pMatrix)
 	{
@@ -141,12 +145,12 @@ var TexturedMeshComponent = Component.extend({
 		//Generate the 4x4 matrix representing position / rotation
 		//TODO this should be cached on the object and only updated when rotated
 		//(moves can be done easily by hand, and updating this every draw will be expensive).		
-		mat4.fromRotationTranslation(mvMatrix, obj.rotation,  obj.position);
-		mat4.scale(mvMatrix, mvMatrix, this.scale);
+		//mat4.fromRotationTranslation(mvMatrix, obj.rotation,  obj.position);
+		//mat4.scale(mvMatrix, mvMatrix, this.scale);
 		//mat4.fromRotationTranslation(cameraMatrix, camera.rotation, camera.position);		
 		mat4.fromQuat(cameraMatrix, camera.rotation);
 		mat4.translate(cameraMatrix, cameraMatrix, camera.position);
-		mat4.multiply(mvMatrix, cameraMatrix, mvMatrix);		
+		mat4.multiply(mvMatrix, cameraMatrix, this.cachedMat);		
 		
 		//load the objects vertex buffer into memory
 		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -189,8 +193,8 @@ var TexturedMeshComponent = Component.extend({
 		this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
 		this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.texture.image);
 		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
-		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR_MIPMAP_NEAREST);
-		this.gl.generateMipmap(this.gl.TEXTURE_2D);
+		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+		//this.gl.generateMipmap(this.gl.TEXTURE_2D);
 		this.gl.bindTexture(this.gl.TEXTURE_2D, null);
 		this.texture.loaded = true;
 	}

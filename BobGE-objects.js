@@ -8,6 +8,8 @@ var GameObject = Class.extend(
 		
 		this.rotation = quat.create();
 		this.position = vec4.create();
+		
+		this.dirty = true;
 	},
 	addComponent: function(c)
 	{

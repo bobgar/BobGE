@@ -189,7 +189,7 @@ var BobGE = Class.extend(
 			{
 				var component = obj.components[j];
 				component.update(elapsed);
-			}
+			}			
 		}
 		this.lastUpdateTime = curTime;				
 		//check the time since last render against our (maximum) framerate.
@@ -239,7 +239,7 @@ var BobGE = Class.extend(
 	}
 });
 
-var logLevel = 2;
+var logLevel = 3;
 function log(s, l)
 {
 	l = typeof l != 'undefined' ? l : 2;
