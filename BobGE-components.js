@@ -13,6 +13,8 @@ var BasicCameraController = Component.extend(
 {
 	init: function()
 	{
+		this.pitch = 0;
+		this.yaw = 0;
 		this.speed = .1;
 		this._super();
 	},
@@ -51,20 +53,28 @@ var BasicCameraController = Component.extend(
 		
 		if (BobGE.inst.keysDown[37]) {
 		  // Left cursor key
-		  quat.rotateY(this.owner.rotation, this.owner.rotation, -.05 );
+		  this.yaw += -.05;
+		  //quat.rotateY(this.owner.rotation, this.owner.rotation, -.05 );
 		}
 		if (BobGE.inst.keysDown[39]) {
 		  // Right cursor key
-		  quat.rotateY(this.owner.rotation, this.owner.rotation, .05 );
+		  this.yaw += +.05;
+		  //quat.rotateY(this.owner.rotation, this.owner.rotation, .05 );
 		}
-		/*if (BobGE.inst.keysDown[38]) {
+		if (BobGE.inst.keysDown[38]) {
 		  // Up cursor key
-		  quat.rotateX(this.owner.rotation, this.owner.rotation, -.05 );
+		  this.pitch += -.05;
+		  //quat.rotateX(this.owner.rotation, this.owner.rotation, -.05 );
 		}
-		if (BobGE.inst.keysDown[40]) {
+		if (BobGE.inst.keysDown[40]) {			
 		  // Down cursor key
-		  quat.rotateX(this.owner.rotation, this.owner.rotation, .05 );
-		}*/
+		  this.pitch += .05;
+		  //quat.rotateX(this.owner.rotation, this.owner.rotation, .05 );
+		}
+		 
+		var q = quat.create();
+		quat.rotateX(this.owner.rotation, q, this.pitch);
+		quat.rotateY(this.owner.rotation, this.owner.rotation, this.yaw);
 		
 		/*if(BobGE.inst.mouseDeltaX != 0)
 			quat.rotateY(this.owner.rotation, this.owner.rotation, .05 * BobGE.inst.mouseDeltaX);
@@ -114,6 +124,9 @@ var TexturedMeshComponent = Component.extend({
 		this.uvBuffer = this.gl.createBuffer();
 		this.triangleBuffer = this.gl.createBuffer();		
 		this.texture = this.gl.createTexture();
+		
+		this.scale = vec3.create();
+		this.scale[0] = 1; this.scale[1] = 1; this.scale[2] = 1;
 	},
 	update: function(elapsed)
 	{
@@ -127,8 +140,9 @@ var TexturedMeshComponent = Component.extend({
 		var shader = BobGE.inst.shaderProgram;
 		//Generate the 4x4 matrix representing position / rotation
 		//TODO this should be cached on the object and only updated when rotated
-		//(moves can be done easily by hand, and updating this every draw will be expensive).
+		//(moves can be done easily by hand, and updating this every draw will be expensive).		
 		mat4.fromRotationTranslation(mvMatrix, obj.rotation,  obj.position);
+		mat4.scale(mvMatrix, mvMatrix, this.scale);
 		//mat4.fromRotationTranslation(cameraMatrix, camera.rotation, camera.position);		
 		mat4.fromQuat(cameraMatrix, camera.rotation);
 		mat4.translate(cameraMatrix, cameraMatrix, camera.position);
