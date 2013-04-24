@@ -7,11 +7,13 @@ This is primarilly an educational project to help me learn Git, WebGL, and Javas
 The code herein is released under LGPL.
 
 This engine is heavily influenced by the tutorials from http://learningwebgl.com/
+and the tutorials from https://github.com/toji/building-the-game
 
 I avoided using 3D libraries with the goal of practicing implementing that layer of
 functionality myself.  I currently use these three helper libraries: 
 GLMatrix (http://glmatrix.net/)
 SimpleJavascriptInheritance (http://ejohn.org/blog/simple-javascript-inheritance/)
+RequireJS (http://requirejs.org/)
 WebGL Utils (Copyright 2010, Google Inc.)
 
 ***************************************
