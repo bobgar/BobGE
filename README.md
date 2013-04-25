@@ -10,7 +10,7 @@ This engine is heavily influenced by the tutorials from http://learningwebgl.com
 and the tutorials from https://github.com/toji/building-the-game
 
 I avoided using 3D libraries with the goal of practicing implementing that layer of
-functionality myself.  I currently use these three helper libraries: 
+functionality myself.  I currently use these four helper libraries: 
 GLMatrix (http://glmatrix.net/)
 SimpleJavascriptInheritance (http://ejohn.org/blog/simple-javascript-inheritance/)
 RequireJS (http://requirejs.org/)

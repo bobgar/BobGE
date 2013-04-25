@@ -1,5 +1,7 @@
-require(["../BobGE/BobGE-loader"], function()
-{
+
+function webGLStart() 
+{		
+	
 	log("Init BobGE!")
 
 	var canvas = document.getElementById("BobGE");
@@ -57,9 +59,4 @@ require(["../BobGE/BobGE-loader"], function()
 			}
 		}		
 	}
-});
-
-function webGLStart() 
-{		
-	
 }

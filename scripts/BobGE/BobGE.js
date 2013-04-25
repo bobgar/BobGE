@@ -34,6 +34,8 @@ var BobGE = Class.extend(
 			this.gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
 			this.gl.viewportWidth = canvas.width;
 			this.gl.viewportHeight = canvas.height;
+			//For this engine we assume we always want to cull back faces.
+			this.gl.enable(this.gl.CULL_FACE);
 		} catch (e) {
 		}
 		if (!this.gl) {
@@ -239,7 +241,7 @@ var BobGE = Class.extend(
 		this.gl.viewport(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 		//Generate the perspective matrix
-		mat4.perspective(pMatrix, 45, this.gl.viewportWidth / this.gl.viewportHeight, 0.1, 100.0);		
+		mat4.perspective(pMatrix, 45, this.gl.viewportWidth / this.gl.viewportHeight, 0.1, 1000.0);		
 		//log("num objects = "+this.objects.length);
 		
 		var cameraMatrix = mat4.create();
