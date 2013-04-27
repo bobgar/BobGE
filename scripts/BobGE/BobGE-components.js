@@ -48,7 +48,15 @@ var BasicCameraController = Component.extend(
 			vec4.add(this.owner.position, this.owner.position, movement);
 		}
 		
-		if (BobGE.inst.keysDown[37]) {
+		if(BobGE.inst.mouseDown)
+		{			
+			this.yaw += BobGE.inst.mouseDeltaX * .01;
+			this.yaw = this.yaw % 6.283
+			this.pitch += BobGE.inst.mouseDeltaY * .01;
+			this.pitch = this.pitch % 6.283
+		}		
+		
+		/*if (BobGE.inst.keysDown[37]) {
 		  // Left cursor key
 		  this.yaw += -.05;
 		  //quat.rotateY(this.owner.rotation, this.owner.rotation, -.05 );
@@ -67,7 +75,7 @@ var BasicCameraController = Component.extend(
 		  // Down cursor key
 		  this.pitch += .05;
 		  //quat.rotateX(this.owner.rotation, this.owner.rotation, .05 );
-		}
+		}*/
 		 
 		var q = quat.create();
 		quat.rotateX(this.owner.rotation, q, this.pitch);
@@ -83,6 +91,18 @@ var BasicCameraController = Component.extend(
 		if(BobGE.inst.mouseDeltay != 0)
 			quat.rotateX(this.owner.rotation, this.owner.rotation, .05 * BobGE.inst.mouseDeltaY);*/
 	
+	}
+});
+
+//Basic Camera Controller + Pl
+var PlayerCameraController = Class.extend(
+{
+	update: function()
+	{
+		if(BobGE.inst.mouseDown)
+		{
+			
+		}
 	}
 });
 

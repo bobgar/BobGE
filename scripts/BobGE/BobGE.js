@@ -50,9 +50,9 @@ var BobGE = Class.extend(
 		document.onkeydown = this.keyDown.bind(this);
 		document.onkeyup = this.keyUp.bind(this);
 		
-		canvas.onmousedown = this.mouseDown.bind(this);
-		document.onmouseup = this.mouseUp.bind(this);
-		document.onmousemove = this.mouseMove.bind(this);		
+		canvas.onmousedown = this.onMouseDown.bind(this);
+		document.onmouseup = this.onMouseUp.bind(this);
+		document.onmousemove = this.onMouseMove.bind(this);		
 		
 		//Mouse deltas should start at 0
 		this.mouseDeltaX = 0;
@@ -92,21 +92,25 @@ var BobGE = Class.extend(
 	/**
 	*  Mouse Handlers
 	**/
-	mouseDown: function(event)
+	onMouseDown: function(event)
 	{
+		this.mouseDown = true;
 	},
-	mouseUp: function(event)
+	onMouseUp: function(event)
 	{
+		this.mouseDown = false;
+		this.lastMouseX = undefined
+		this.lastMouseY = undefined
 	},
-	mouseMove: function(event)
+	onMouseMove: function(event)
 	{		
 		var newX = event.clientX;
 		var newY = event.clientY;
 		//TODO slow / dumb to do this every mouse move.
 		this.lastMouseX = typeof this.lastMouseX != 'undefined' ? this.lastMouseX : newX;
 		this.lastMouseY = typeof this.lastMouseY != 'undefined' ? this.lastMouseY : newY;
-		this.mouseDeltaX = newX - this.lastMouseX;
-		this.mouseDeltaY = newY - this.lastMouseY;
+		this.mouseDeltaX += Math.max( Math.min( newX - this.lastMouseX, 20), -20);
+		this.mouseDeltaY += Math.max( Math.min( newY - this.lastMouseY, 20), -20);
 		this.lastMouseX = newX;
 		this.lastMouseY = newY;
 	},
@@ -237,12 +241,12 @@ var BobGE = Class.extend(
 		}
 		this.lastUpdateTime = curTime;				
 		//check the time since last render against our (maximum) framerate.
-		if(curTime - this.lastRenderTime > this.maxFramerate)
-		{
+		//if(curTime - this.lastRenderTime > this.maxFramerate)
+		//{
 			this.lastRenderTime = curTime;
 			//Draw the scene
 			this.drawScene();
-		}
+		//}
 		
 		this.mouseDeltaX = 0;
 		this.mouseDeltaY = 0;

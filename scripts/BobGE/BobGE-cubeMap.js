@@ -4,10 +4,10 @@ var CubeMap = Component.extend(
 	{
 		this.perlin = new SimplexNoise();
 		this.gl = BobGE.inst.gl;
-		this.chunkXSize = chunkXSize ? chunkXSize : 16;
-		this.chunkYSize = chunkYSize ? chunkYSize : 16;
-		this.chunkZSize = chunkXSize ? chunkZSize : 16;
-		this.chunkDrawDistance = chunkDrawDistance ? chunkDrawDistance : 4
+		this.chunkXSize = chunkXSize ? chunkXSize : 32;
+		this.chunkYSize = chunkYSize ? chunkYSize : 32;
+		this.chunkZSize = chunkXSize ? chunkZSize : 32;
+		this.chunkDrawDistance = chunkDrawDistance ? chunkDrawDistance : 3
 		this.seed = seed ? seed : Math.random();
 		//TODO an associative array is not the ideal way to store this.
 		this.chunkMap = new Object();
@@ -47,8 +47,8 @@ var CubeMap = Component.extend(
 		//this.lastChunkX = this.curChunkX ;
 		//this.lastChunkZ = this.curChunkZ ;
 		
-		this.curChunkX = -Math.round(BobGE.inst.mainCamera.position[0] / (this.chunkXSize*2.0));
-		this.curChunkZ = -Math.round(BobGE.inst.mainCamera.position[2] / (this.chunkZSize*2.0));
+		this.curChunkX = Math.round((-BobGE.inst.mainCamera.position[0] - this.chunkXSize) / (this.chunkXSize*2.0));
+		this.curChunkZ = Math.round((-BobGE.inst.mainCamera.position[2] - this.chunkZSize) / (this.chunkZSize*2.0));
 		for(var k = -this.chunkDrawDistance; k <=this.chunkDrawDistance ; ++k)
 		{
 			for(var l = -this.chunkDrawDistance; l <=this.chunkDrawDistance ; ++l)
@@ -61,8 +61,8 @@ var CubeMap = Component.extend(
 					//log("instantiating chunk "+x+","+z);
 				}
 				var g = this.ground[k + this.chunkDrawDistance][l + this.chunkDrawDistance];
-				g.position[0] = (x) * (this.chunkXSize*2.0) - 1;
-				g.position[2] = (z) * (this.chunkZSize*2.0) - 1;
+				g.position[0] = (x) * (this.chunkXSize*2.0) + (this.chunkXSize) - 1;
+				g.position[2] = (z) * (this.chunkZSize*2.0) + (this.chunkXSize) - 1;
 				g.dirty = true;
 			}
 		}
@@ -354,11 +354,11 @@ var CubeMapChunk = Class.extend(
 					{
 						if(x+1 >= this.xSize && this.cubeMap.chunkMap[(this.x+1) +","+ this.z] && this.cubeMap.chunkMap[(this.x+1) +","+ this.z].chunk[0][y][z].blockType == -1 )
 							this.chunk[x][y][z].addVisibleEdge();
-						if(x-1 < 0 && this.cubeMap.chunkMap[(this.x-1) +","+ this.z] && this.cubeMap.chunkMap[(this.x-1) +","+ this.z].chunk[this.xSize-1,y,z].blockType == -1 )
+						if(x-1 < 0 && this.cubeMap.chunkMap[(this.x-1) +","+ this.z] && this.cubeMap.chunkMap[(this.x-1) +","+ this.z].chunk[this.xSize-1][y][z].blockType == -1 )
 							this.chunk[x][y][z].addVisibleEdge();
 						if(z+1 >= this.ySize && this.cubeMap.chunkMap[this.x+","+(this.z+1)] && this.cubeMap.chunkMap[this.x+","+(this.z+1)].chunk[x][y][0].blockType == -1 )
 							this.chunk[x][y][z].addVisibleEdge();
-						if(z-1 < 0 && this.cubeMap.chunkMap[this.x+","+(this.z-1)] && this.cubeMap.chunkMap[this.x+","+(this.z-1)].chunk[x,y,this.zSize-1].blockType == -1 )
+						if(z-1 < 0 && this.cubeMap.chunkMap[this.x+","+(this.z-1)] && this.cubeMap.chunkMap[this.x+","+(this.z-1)].chunk[x][y][this.zSize-1].blockType == -1 )
 							this.chunk[x][y][z].addVisibleEdge();
 					}
 				}
@@ -427,3 +427,4 @@ var CubeMapCube = Class.extend(
 		}
 	}
 });
+
