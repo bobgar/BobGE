@@ -9,7 +9,7 @@ var Component = Class.extend(
 var BasicCameraController = Component.extend(
 {
 	init: function()
-	{
+	{		
 		this.pitch = 0;
 		this.yaw = 0;
 		this.speed = 1;
@@ -73,6 +73,11 @@ var BasicCameraController = Component.extend(
 		quat.rotateX(this.owner.rotation, q, this.pitch);
 		quat.rotateY(this.owner.rotation, this.owner.rotation, this.yaw);
 		
+		var iq = quat.create();
+		var cd = vec3.fromValues(0, 0, -1);
+		quat.invert(iq, this.owner.rotation);
+		vec3.transformQuat(this.owner.dir, cd, iq)
+		
 		/*if(BobGE.inst.mouseDeltaX != 0)
 			quat.rotateY(this.owner.rotation, this.owner.rotation, .05 * BobGE.inst.mouseDeltaX);
 		if(BobGE.inst.mouseDeltay != 0)
@@ -116,7 +121,7 @@ var TexturedMeshComponent = Component.extend({
 		if(! BobGE.inst.uvBuffers[id])	
 			BobGE.inst.uvBuffers[id] = this.gl.createBuffer();
 		if(! BobGE.inst.triangleBuffers[id])	
-			BobGE.inst.triangleBuffers = this.gl.createBuffer();	
+			BobGE.inst.triangleBuffers[id] = this.gl.createBuffer();	
 		if(!BobGE.inst.textureInstanceDictionaries[id])
 			BobGE.inst.textureInstanceDictionaries[id] = new Object();		
 	},

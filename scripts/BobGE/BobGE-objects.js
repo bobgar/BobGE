@@ -10,6 +10,7 @@ var GameObject = Class.extend(
 		
 		this.rotation = quat.create();
 		this.position = vec4.create();
+		this.dir = vec3.create();
 		//in some ways scale is out of place here since objects are points, 
 		//but because I cache transforms on the object right now it makes the most sense.
 		this.scale = vec3.create();
