@@ -356,9 +356,9 @@ var CubeMapChunk = Class.extend(
 							this.chunk[x][y][z].addVisibleEdge();
 						if(x-1 < 0 && this.cubeMap.chunkMap[(this.x-1) +","+ this.z] && this.cubeMap.chunkMap[(this.x-1) +","+ this.z].chunk[this.xSize-1,y,z].blockType == -1 )
 							this.chunk[x][y][z].addVisibleEdge();
-						if(y+1 >= this.ySize && this.cubeMap.chunkMap[this.x+","+(this.z+1)] && this.cubeMap.chunkMap[this.x+","+(this.z+1)].chunk[x][y][0].blockType == -1 )
+						if(z+1 >= this.ySize && this.cubeMap.chunkMap[this.x+","+(this.z+1)] && this.cubeMap.chunkMap[this.x+","+(this.z+1)].chunk[x][y][0].blockType == -1 )
 							this.chunk[x][y][z].addVisibleEdge();
-						if(y-1 < 0 && this.cubeMap.chunkMap[this.x+","+(this.z-1)] && this.cubeMap.chunkMap[this.x+","+(this.z-1)].chunk[x,y,this.zSize-1].blockType == -1 )
+						if(z-1 < 0 && this.cubeMap.chunkMap[this.x+","+(this.z-1)] && this.cubeMap.chunkMap[this.x+","+(this.z-1)].chunk[x,y,this.zSize-1].blockType == -1 )
 							this.chunk[x][y][z].addVisibleEdge();
 					}
 				}
