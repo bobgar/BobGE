@@ -9,7 +9,9 @@ function webGLStart()
 	
 	bobGE.mainCamera.addComponent(new BasicCameraController());
 	bobGE.mainCamera.position[2] = -20;
-	bobGE.mainCamera.position[1] = -40;
+	bobGE.mainCamera.position[1] = -80;
+	bobGE.mainCamera.components[0].pitch = 1.1;
+	bobGE.mainCamera.addComponent(new ConstantMovementComponent(0,0,1));
 	
 	var go = new GameObject("testCube");
 	go.position[1] = 40;
@@ -40,6 +42,7 @@ function webGLStart()
 	go3.addComponent( new ConstantRotationComponent(-.06,-.05,-.04) );	
 	go3.addComponent( c3 );	
 	bobGE.addObject(go3);
+	
 	
 	var cubeMapObject = new GameObject("CubeMap");
 	var cubeMap = new CubeMap() ;

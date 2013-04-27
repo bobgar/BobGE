@@ -7,11 +7,31 @@ var CubeMap = Component.extend(
 		this.chunkXSize = chunkXSize ? chunkXSize : 16;
 		this.chunkYSize = chunkYSize ? chunkYSize : 16;
 		this.chunkZSize = chunkXSize ? chunkZSize : 16;
-		this.chunkDrawDistance = chunkDrawDistance ? chunkDrawDistance : 5
+		this.chunkDrawDistance = chunkDrawDistance ? chunkDrawDistance : 4
 		this.seed = seed ? seed : Math.random();
 		//TODO an associative array is not the ideal way to store this.
 		this.chunkMap = new Object();
 		
+		this.ground = new Array(this.chunkDrawDistance*2+1)
+		for(var i = 0; i < this.ground.length; ++i)
+		{
+			this.ground[i] = new Array(this.chunkDrawDistance*2+1);
+			for(var j = 0; j < this.ground[i].length; ++j)
+			{
+				this.ground[i][j] = new GameObject("ground"+i+","+j);					
+				this.ground[i][j].scale[0] = this.chunkXSize;
+				this.ground[i][j].scale[2] = this.chunkZSize;
+				this.ground[i][j].position[1] = -1;
+				
+				this.ground[i][j].position[0] = (i-this.chunkDrawDistance) * (this.chunkXSize*2.0) - 1;
+				this.ground[i][j].position[2] = (j-this.chunkDrawDistance) * (this.chunkZSize*2.0) - 1;
+				
+				var texturePlaneComponent = new TexturedPlaneComponent(this.chunkXSize);
+				texturePlaneComponent.loadTexture("assets/Water.jpg");	
+				this.ground[i][j].addComponent( texturePlaneComponent );	
+				BobGE.inst.addObject(this.ground[i][j]);
+			}
+		}
 		
 		//this.initShaders();
 		
@@ -24,6 +44,9 @@ var CubeMap = Component.extend(
 	
 	update: function()
 	{
+		//this.lastChunkX = this.curChunkX ;
+		//this.lastChunkZ = this.curChunkZ ;
+		
 		this.curChunkX = -Math.round(BobGE.inst.mainCamera.position[0] / (this.chunkXSize*2.0));
 		this.curChunkZ = -Math.round(BobGE.inst.mainCamera.position[2] / (this.chunkZSize*2.0));
 		for(var k = -this.chunkDrawDistance; k <=this.chunkDrawDistance ; ++k)
@@ -37,8 +60,16 @@ var CubeMap = Component.extend(
 					this.chunkMap[x+","+z] = new CubeMapChunk(this, x, z, this.chunkXSize,this.chunkYSize,this.chunkZSize);					
 					//log("instantiating chunk "+x+","+z);
 				}
+				var g = this.ground[k + this.chunkDrawDistance][l + this.chunkDrawDistance];
+				g.position[0] = (x) * (this.chunkXSize*2.0) - 1;
+				g.position[2] = (z) * (this.chunkZSize*2.0) - 1;
+				g.dirty = true;
 			}
 		}
+		/*if(this.lastChunkX != this.curChunkX || this.lastChunkZ != this.curChunkZ)
+		{
+			
+		}*/
 	},
 	frustrumCulling: function(c)
 	{	
@@ -132,9 +163,9 @@ var CubeMap = Component.extend(
 		this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
 		this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
 		this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.texture.image);
-		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
-		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-		//this.gl.generateMipmap(this.gl.TEXTURE_2D);
+		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
+		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR_MIPMAP_NEAREST);
+		this.gl.generateMipmap(this.gl.TEXTURE_2D);
 		this.gl.bindTexture(this.gl.TEXTURE_2D, null);
 		this.texture.loaded = true;		
 	},
@@ -232,19 +263,10 @@ var CubeMapChunk = Class.extend(
 				for(var k = 0; k < this.zSize; ++k)
 				{
 					var t = this.cubeMap.perlin.noise3d(i/this.xSize + this.x, j / this.ySize, k/this.zSize + this.z) + (j / this.ySize);
-					if(t < -.3)
+					if(t < -.2)
 						this.chunk[i][j][k] = new CubeMapCube(this, i,j,k);
 					else
 						this.chunk[i][j][k] = new CubeMapCube(this, i,j,k, -1);
-					/*if(j < this.ySize/2)
-						this.chunk[i][j][k] = new CubeMapCube(this, i,j,k);
-					else if(j == this.ySize/2)
-					{
-						this.chunk[i][j][k] = new CubeMapCube(this, i,j,k, 1);
-						this.chunk[i][j][k].addVisibleEdge();
-					}
-					else
-						this.chunk[i][j][k] = new CubeMapCube(this, i,j,k, -1);*/
 				}
 			}
 		}

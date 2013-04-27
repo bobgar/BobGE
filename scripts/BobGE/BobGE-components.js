@@ -110,6 +110,26 @@ var ConstantRotationComponent = Component.extend({
 	}
 });
 
+var ConstantMovementComponent = Component.extend({
+	init: function(x, y, z)
+	{	
+		this._super();
+		//set rotations with defaulting
+		this.x = typeof x != 'undefined' ? x : 0;
+		this.y = typeof x != 'undefined' ? y : 0;
+		this.z = typeof x != 'undefined' ? z : 0;		
+		//document.onkeyup = handleKeyUp.bind(this);
+	},
+	update: function(elapsed)
+	{
+		//apply the appropriate amoutn of rotation based on elapsed time.
+		this.owner.position[0] += this.x;	
+		this.owner.position[1] += this.y;	
+		this.owner.position[2] += this.z;	
+		this.owner.dirty = true;
+	}
+});
+
 var TexturedMeshComponent = Component.extend({
 	init: function(id)
 	{
@@ -297,6 +317,63 @@ var TexturedCubeComponent = TexturedMeshComponent.extend({
 		/*this.prototype.vertexBuffer = this.vertexBuffer;
 		this.prototype.uvBuffer = this.uvBuffer;
 		this.prototype.triangleBuffer = this.triangleBuffer;*/
+	}
+});
+
+var TexturedPlaneComponent = TexturedMeshComponent.extend({
+	init: function(textureRepeat)
+	{
+		var	id = "Plane";
+		TexturedPlaneComponent.prototype.id = id;
+		this._super(id);
+		
+		if(! BobGE.inst.instancedMeshes[id])
+			BobGE.inst.instancedMeshes[id] = TexturedPlaneComponent.prototype;
+		
+		if(!TexturedPlaneComponent.prototype.buffersInitialized)
+		{
+			this.initializeBuffers(textureRepeat);
+			TexturedPlaneComponent.prototype.buffersInitialized = true;
+		}
+	},
+	loadTexture: function(tex)
+	{
+		this._super(tex, TexturedPlaneComponent.prototype.id);
+	},
+	initializeBuffers: function(textureRepeat)
+	{		
+		var id = TexturedPlaneComponent.prototype.id;
+		var vb = BobGE.inst.vertexBuffers[id] = this.gl.createBuffer();
+		var uv = BobGE.inst.uvBuffers[id] = this.gl.createBuffer();
+		var tb = BobGE.inst.triangleBuffers[id] = this.gl.createBuffer();
+		log("init vertex buffer");
+		//Set up the vertex buffer		
+		var vertices = [
+			-1.0,  0.0, -1.0,	-1.0,  0.0,  1.0,	1.0,  0.0,  1.0,	1.0,  0.0, -1.0,	// groundplane
+        ];
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vb);
+		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(vertices), this.gl.STATIC_DRAW);
+		vb.itemSize = 3;
+		vb.numItems = 4;	
+		log("init UV Map");
+		//Set up the UV Map
+		var textureMap = [
+          0.0, textureRepeat,		0.0, 0.0,	textureRepeat, 0.0,	textureRepeat, textureRepeat, // Top face          
+        ];
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, uv);
+		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(textureMap), this.gl.STATIC_DRAW);
+		uv.itemSize = 2;
+		uv.numItems = 4;
+		log("init triangle Map");
+		//Set up the triangle map
+		var triangles = [
+            0, 1, 2,      0, 2, 3,    // Front face
+        ];
+		this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, tb);
+		this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangles), this.gl.STATIC_DRAW);		
+		tb.itemSize = 1;
+		tb.numItems = 6;
+		
 	}
 });
 
