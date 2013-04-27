@@ -99,7 +99,17 @@ var CubeMap = Component.extend(
 		//loads the triangle buffer into memory
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, BobGE.inst.triangleBuffers[id]);
 		
+		//load the objects normal buffers.
+		gl.bindBuffer(gl.ARRAY_BUFFER, BobGE.inst.normalsBuffers[id]);
+		gl.vertexAttribPointer(shader.vertexNormalAttribute, BobGE.inst.normalsBuffers[id].itemSize, gl.FLOAT, false, 0, 0);
 		
+		/*gl.uniform3f(shader.ambientColorUniform,1,1,1);		
+		var lightingDirection = [1,-1,1];
+		var adjustedLD = vec3.create();
+		vec3.normalize(lightingDirection, adjustedLD);
+		vec3.scale(adjustedLD, -1);
+		gl.uniform3fv(shader.lightingDirectionUniform, adjustedLD);		
+		gl.uniform3f(shader.directionalColorUniform, 1, 1, 1);*/
 		
 		for(var k = -CubeMap.inst.chunkDrawDistance; k <=CubeMap.inst.chunkDrawDistance ; ++k)
 		{
@@ -116,6 +126,8 @@ var CubeMap = Component.extend(
 						gl.bindTexture(gl.TEXTURE_2D, CubeMap.inst.cubeTextureMap[i]);
 						gl.uniform1i(shader.samplerUniform, 0);
 						
+						gl.uniform1i(shader.useLightingUniform, true);
+						
 						for(var j = 0; j < vl[i].length; ++j)
 						{			
 							var obj = vl[i][j];
@@ -125,6 +137,13 @@ var CubeMap = Component.extend(
 								//gl.uniform3fv(shader.uTransUniform , false, vl[i][j].pos);
 								gl.uniformMatrix4fv(shader.pMatrixUniform, false, pMatrix);
 								gl.uniformMatrix4fv(shader.mvMatrixUniform, false, mvMatrix);
+								
+								var normalMatrix = mat3.create();
+								//mat3.fromMat4(normalMatrix, mvMatrix)
+								//mat3.invert(normalMatrix, normalMatrix);
+								//mat3.transpose(normalMatrix,normalMatrix);
+								gl.uniformMatrix3fv(shader.nMatrixUniform, false, normalMatrix);
+								
 								gl.drawElements(gl.TRIANGLES, BobGE.inst.triangleBuffers[id].numItems, gl.UNSIGNED_SHORT, 0);
 							}
 						}
@@ -151,23 +170,24 @@ var CubeMap = Component.extend(
 		}
 		log("load tex");
 		var texture = this.gl.createTexture();
-		this.texture.image = new Image();
-		this.texture.image.onload = this.textureLoaded.bind(this);
-		this.texture.image.src = tex;  
+		texture.image = new Image();
+		texture.image.onload = this.textureLoaded.bind(texture);
+		texture.image.src = tex;  
 		BobGE.inst.textures[tex] = texture;
 		return BobGE.inst.textures[tex];
 	},
 	textureLoaded: function()
 	{	
 		log("tex loaded");
-		this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
-		this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
-		this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.texture.image);
-		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
-		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR_MIPMAP_NEAREST);
-		this.gl.generateMipmap(this.gl.TEXTURE_2D);
-		this.gl.bindTexture(this.gl.TEXTURE_2D, null);
-		this.texture.loaded = true;		
+		var gl = BobGE.inst.gl;
+		gl.bindTexture(gl.TEXTURE_2D, this);
+		//gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+		gl.generateMipmap(gl.TEXTURE_2D);
+		gl.bindTexture(gl.TEXTURE_2D, null);
+		this.loaded = true;		
 	},
 	
 	/**
@@ -309,16 +329,37 @@ var CubeMapChunk = Class.extend(
 					{
 						if(x+1 < this.xSize)
 							this.chunk[x+1][y][z].addVisibleEdge();
+						else if(this.cubeMap.chunkMap[(this.x+1) +","+ this.z]) //if the cubemap at x+1 exists
+							this.cubeMap.chunkMap[(this.x+1) +","+ this.z].chunk[0][y][z].addVisibleEdge();
 						if(x-1 >= 0)
 							this.chunk[x-1][y][z].addVisibleEdge();
+						else if(this.cubeMap.chunkMap[(this.x-1) +","+ this.z]) //if the cubemap at x+1 exists
+							this.cubeMap.chunkMap[(this.x-1) +","+ this.z].chunk[this.xSize-1][y][z].addVisibleEdge();
+							
 						if(y+1 < this.ySize)
-							this.chunk[x][y+1][z].addVisibleEdge();
+							this.chunk[x][y+1][z].addVisibleEdge();					
 						if(y-1 >= 0)
-							this.chunk[x][y-1][z].addVisibleEdge();
+							this.chunk[x][y-1][z].addVisibleEdge();						
+							
 						if(z+1 < this.zSize)
 							this.chunk[x][y][z+1].addVisibleEdge();
+						else if(this.cubeMap.chunkMap[this.x+","+(this.z+1)]) //if the cubemap at x+1 exists
+							this.cubeMap.chunkMap[this.x+","+(this.z+1)].chunk[x][y][0].addVisibleEdge();		
 						if(z-1 >= 0)
 							this.chunk[x][y][z-1].addVisibleEdge();
+						else if(this.cubeMap.chunkMap[this.x+","+(this.z-1)]) //if the cubemap at x+1 exists
+							this.cubeMap.chunkMap[this.x+","+(this.z-1)].chunk[x][y][this.zSize-1].addVisibleEdge();	
+					}
+					else //This is to check for previously generated chunks bordering this one, since they will need to update visibility on edges which couldn't be done before.
+					{
+						if(x+1 >= this.xSize && this.cubeMap.chunkMap[(this.x+1) +","+ this.z] && this.cubeMap.chunkMap[(this.x+1) +","+ this.z].chunk[0][y][z].blockType == -1 )
+							this.chunk[x][y][z].addVisibleEdge();
+						if(x-1 < 0 && this.cubeMap.chunkMap[(this.x-1) +","+ this.z] && this.cubeMap.chunkMap[(this.x-1) +","+ this.z].chunk[this.xSize-1,y,z].blockType == -1 )
+							this.chunk[x][y][z].addVisibleEdge();
+						if(y+1 >= this.ySize && this.cubeMap.chunkMap[this.x+","+(this.z+1)] && this.cubeMap.chunkMap[this.x+","+(this.z+1)].chunk[x][y][0].blockType == -1 )
+							this.chunk[x][y][z].addVisibleEdge();
+						if(y-1 < 0 && this.cubeMap.chunkMap[this.x+","+(this.z-1)] && this.cubeMap.chunkMap[this.x+","+(this.z-1)].chunk[x,y,this.zSize-1].blockType == -1 )
+							this.chunk[x][y][z].addVisibleEdge();
 					}
 				}
 			}

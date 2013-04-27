@@ -140,10 +140,13 @@ var TexturedMeshComponent = Component.extend({
 			BobGE.inst.vertexBuffers[id] = this.gl.createBuffer();
 		if(! BobGE.inst.uvBuffers[id])	
 			BobGE.inst.uvBuffers[id] = this.gl.createBuffer();
+		if(!BobGE.inst.normalsBuffers[id])
+			BobGE.inst.normalsBuffers[id] = new Object();				
 		if(! BobGE.inst.triangleBuffers[id])	
 			BobGE.inst.triangleBuffers[id] = this.gl.createBuffer();	
 		if(!BobGE.inst.textureInstanceDictionaries[id])
 			BobGE.inst.textureInstanceDictionaries[id] = new Object();		
+		
 	},
 	
 	drawInstances: function(mvMatrix, pMatrix, cameraMatrix, id)
@@ -160,13 +163,17 @@ var TexturedMeshComponent = Component.extend({
 		//load the objects UV map into memory
 		gl.bindBuffer(gl.ARRAY_BUFFER, BobGE.inst.uvBuffers[id]);
 		gl.vertexAttribPointer(shader.textureCoordAttribute, BobGE.inst.uvBuffers[id].itemSize, gl.FLOAT, false, 0, 0);		
+		
+		//load the objects normal buffers.
+		gl.bindBuffer(gl.ARRAY_BUFFER, BobGE.inst.normalsBuffers[id]);
+		gl.vertexAttribPointer(shader.vertexNormalAttribute, BobGE.inst.normalsBuffers[id].itemSize, gl.FLOAT, false, 0, 0);
 	
 		//loads the triangle buffer into memory
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, BobGE.inst.triangleBuffers[id]);
-	
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, BobGE.inst.triangleBuffers[id]);		
+		
 		for(var i in BobGE.inst.textureInstanceDictionaries[id])
 		{
-			var tid = BobGE.inst.textureInstanceDictionaries[id];
+			var tid = BobGE.inst.textureInstanceDictionaries[id]; 
 			//load the texture in once for all instance which share the same texture!
 			gl.bindTexture(gl.TEXTURE_2D, BobGE.inst.textures[i]);
 			gl.uniform1i(shader.samplerUniform, 0);
@@ -205,6 +212,7 @@ var TexturedMeshComponent = Component.extend({
 		
 		//load the objects triangle buffer into memory
 		this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.triangleBuffer);
+		
 		//Load the matricies into the shaders
 		this.gl.uniformMatrix4fv(shader.pMatrixUniform, false, pMatrix);
 		this.gl.uniformMatrix4fv(shader.mvMatrixUniform, false, mvMatrix);
@@ -235,11 +243,11 @@ var TexturedMeshComponent = Component.extend({
 	{	
 		log("tex loaded");
 		this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
-		this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
+		//this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
 		this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.texture.image);
-		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
-		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-		//this.gl.generateMipmap(this.gl.TEXTURE_2D);
+		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
+		this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR_MIPMAP_NEAREST);
+		this.gl.generateMipmap(this.gl.TEXTURE_2D);
 		this.gl.bindTexture(this.gl.TEXTURE_2D, null);
 		this.texture.loaded = true;		
 	}
@@ -271,6 +279,7 @@ var TexturedCubeComponent = TexturedMeshComponent.extend({
 		var vb = BobGE.inst.vertexBuffers[id] = this.gl.createBuffer();
 		var uv = BobGE.inst.uvBuffers[id] = this.gl.createBuffer();
 		var tb = BobGE.inst.triangleBuffers[id] = this.gl.createBuffer();
+		var vn = BobGE.inst.normalsBuffers[id] = this.gl.createBuffer();
 		log("init vertex buffer");
 		//Set up the vertex buffer		
 		var vertices = [            
@@ -313,6 +322,19 @@ var TexturedCubeComponent = TexturedMeshComponent.extend({
 		this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangles), this.gl.STATIC_DRAW);		
 		tb.itemSize = 1;
 		tb.numItems = 36;
+		//Set up the normal map
+		var vertexNormals = [      
+			0.0,  0.0,  1.0, 0.0,  0.0,  1.0, 0.0,  0.0,  1.0, 0.0,  0.0,  1.0,// Front face
+			0.0,  0.0, -1.0, 0.0,  0.0, -1.0, 0.0,  0.0, -1.0, 0.0,  0.0, -1.0,// Back face
+			0.0,  1.0,  0.0, 0.0,  1.0,  0.0, 0.0,  1.0,  0.0, 0.0,  1.0,  0.0,// Top face
+			0.0, -1.0,  0.0, 0.0, -1.0,  0.0, 0.0, -1.0,  0.0, 0.0, -1.0,  0.0,// Bottom face
+			1.0,  0.0,  0.0,	1.0,  0.0,  0.0,	1.0,  0.0,  0.0, 1.0,  0.0,  0.0,// Right face
+			-1.0,  0.0,  0.0,-1.0,  0.0,  0.0,-1.0,  0.0,  0.0,-1.0,  0.0,  0.0,// Left face
+		];
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vn);
+		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(vertexNormals), this.gl.STATIC_DRAW);
+		vn.itemSize = 3;
+		vn.numItems = 24;
 		
 		/*this.prototype.vertexBuffer = this.vertexBuffer;
 		this.prototype.uvBuffer = this.uvBuffer;
@@ -346,6 +368,7 @@ var TexturedPlaneComponent = TexturedMeshComponent.extend({
 		var vb = BobGE.inst.vertexBuffers[id] = this.gl.createBuffer();
 		var uv = BobGE.inst.uvBuffers[id] = this.gl.createBuffer();
 		var tb = BobGE.inst.triangleBuffers[id] = this.gl.createBuffer();
+		var vn = BobGE.inst.normalsBuffers[id] = this.gl.createBuffer();
 		log("init vertex buffer");
 		//Set up the vertex buffer		
 		var vertices = [
@@ -373,7 +396,14 @@ var TexturedPlaneComponent = TexturedMeshComponent.extend({
 		this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangles), this.gl.STATIC_DRAW);		
 		tb.itemSize = 1;
 		tb.numItems = 6;
-		
+				
+		var vertexNormals = [  
+		0.0,  1.0,  0.0, 0.0,  1.0,  0.0, 0.0,  1.0,  0.0, 0.0,  1.0,  0.0,// Top face
+		];
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vn);
+		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(vertexNormals), this.gl.STATIC_DRAW);
+		vn.itemSize = 3;
+		vn.numItems = 4;
 	}
 });
 

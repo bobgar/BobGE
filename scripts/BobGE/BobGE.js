@@ -25,7 +25,8 @@ var BobGE = Class.extend(
 		
 		//TODO this may be hacky -- storing all the vertex, triangle, and uv maps in dictionaries here!
 		this.vertexBuffers = new Object();
-		this.uvBuffers = new Object();			
+		this.uvBuffers = new Object();
+		this.normalsBuffers = new Object();
 		this.triangleBuffers = new Object();			
 		this.textureInstanceDictionaries = new Object();
 		
@@ -43,7 +44,7 @@ var BobGE = Class.extend(
 		}
 		
 		this.initShaders();
-		this.initCamera();
+		this.initCamera();		
 		
 		this.keysDown = new Object();
 		document.onkeydown = this.keyDown.bind(this);
@@ -57,9 +58,25 @@ var BobGE = Class.extend(
 		this.mouseDeltaX = 0;
 		this.mouseDeltaY = 0;
 		
+		this.curLightTheta = 0;
+		
 		//This call starts the update loop		
 		this.update();
 		log("BobGE init complete");
+	},
+	setupLights: function()
+	{
+		this.gl.uniform3f(this.shaderProgram.ambientColorUniform,.5,.5,.5);	
+		var lightingDirection = [ Math.sin(this.curLightTheta) , -Math.cos(this.curLightTheta) , -.3];
+		this.curLightTheta += .01;
+		if(this.curLightTheta >= 6.3)
+			this.curLightTheta = 0;
+		var adjustedLD = vec3.create();
+		vec3.normalize(adjustedLD, lightingDirection);
+		vec3.scale(adjustedLD, adjustedLD,  -1);
+		this.gl.uniform3fv(this.shaderProgram.lightingDirectionUniform, adjustedLD);		
+		this.gl.uniform3f(this.shaderProgram.directionalColorUniform, .8, .8, .8);     
+	
 	},
 	/**
 	*  Keyboard handlers
@@ -173,12 +190,21 @@ var BobGE = Class.extend(
 		this.shaderProgram.vertexPositionAttribute = this.gl.getAttribLocation(this.shaderProgram, "aVertexPosition");
 		this.gl.enableVertexAttribArray(this.shaderProgram.vertexPositionAttribute);
 		
+		this.shaderProgram.vertexNormalAttribute = this.gl.getAttribLocation(this.shaderProgram, "aVertexNormal");
+        this.gl.enableVertexAttribArray(this.shaderProgram.vertexNormalAttribute);
+		
 		this.shaderProgram.textureCoordAttribute = this.gl.getAttribLocation(this.shaderProgram, "aTextureCoord");
         this.gl.enableVertexAttribArray(this.shaderProgram.textureCoordAttribute);
 
 		this.shaderProgram.pMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uPMatrix");
 		this.shaderProgram.mvMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uMVMatrix");
+		this.shaderProgram.nMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uNMatrix");
 		this.shaderProgram.samplerUniform = this.gl.getUniformLocation(this.shaderProgram, "uSampler");
+		
+		this.shaderProgram.useLightingUniform = this.gl.getUniformLocation(this.shaderProgram, "uUseLighting");
+        this.shaderProgram.ambientColorUniform = this.gl.getUniformLocation(this.shaderProgram, "uAmbientColor");
+        this.shaderProgram.lightingDirectionUniform = this.gl.getUniformLocation(this.shaderProgram, "uLightingDirection");
+        this.shaderProgram.directionalColorUniform = this.gl.getUniformLocation(this.shaderProgram, "uDirectionalColor");
 	},
 	
 	/**
@@ -247,6 +273,8 @@ var BobGE = Class.extend(
 		var cameraMatrix = mat4.create();
 		mat4.fromQuat(cameraMatrix, this.mainCamera.rotation);
 		mat4.translate(cameraMatrix, cameraMatrix, this.mainCamera.position);		
+		
+		this.setupLights();
 		
 		//Draw instanced pass
 		for(var k in this.instancedMeshes)
