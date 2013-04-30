@@ -12,70 +12,43 @@ var BasicCameraController = Component.extend(
 	{		
 		this.pitch = 0;
 		this.yaw = 0;
-		this.speed = 1;
+		this.speed = 30; //per second		
 		this._super();
 	},
-	update: function()
+	update: function(elapsed)
 	{			
+		var ms = this.speed * (elapsed / 1000.0);
+	
 		var q = quat.create();
 		quat.invert(q, this.owner.rotation);
 		if (BobGE.inst.keysDown[87]) 
 		{
-			var movement = vec3.fromValues(0, 0, 1);
+			var movement = vec3.fromValues(0, 0, ms);
 			vec4.transformQuat(movement, movement, q);
-			vec4.scale(movement, movement, this.speed);
-			vec4.add(this.owner.position, this.owner.position, movement);
 		}
 		if (BobGE.inst.keysDown[83]) 
 		{
-			var movement = vec3.fromValues(0, 0, -1);
+			var movement = vec3.fromValues(0, 0, -ms);
 			vec4.transformQuat(movement, movement, q);
-			//vec4.scale(movement, movement, this.speed);
-			vec4.add(this.owner.position, this.owner.position, movement);
 		}
 		if (BobGE.inst.keysDown[65]) 
 		{
-			var movement = vec3.fromValues(1, 0, 0);
+			var movement = vec3.fromValues(ms, 0, 0);
 			vec4.transformQuat(movement, movement, q);
-			vec4.scale(movement, movement, this.speed);
-			vec4.add(this.owner.position, this.owner.position, movement);
 		}
 		if (BobGE.inst.keysDown[68]) 
 		{
-			var movement = vec3.fromValues(-1, 0, 0);
+			var movement = vec3.fromValues(-ms, 0, 0);
 			vec4.transformQuat(movement, movement, q);
-			vec4.scale(movement, movement, this.speed);
-			vec4.add(this.owner.position, this.owner.position, movement);
 		}
 		
-		if(BobGE.inst.mouseDown)
+		if(BobGE.inst.leftButtonDown)
 		{			
 			this.yaw += BobGE.inst.mouseDeltaX * .01;
 			this.yaw = this.yaw % 6.283
 			this.pitch += BobGE.inst.mouseDeltaY * .01;
 			this.pitch = this.pitch % 6.283
 		}		
-		
-		/*if (BobGE.inst.keysDown[37]) {
-		  // Left cursor key
-		  this.yaw += -.05;
-		  //quat.rotateY(this.owner.rotation, this.owner.rotation, -.05 );
-		}
-		if (BobGE.inst.keysDown[39]) {
-		  // Right cursor key
-		  this.yaw += +.05;
-		  //quat.rotateY(this.owner.rotation, this.owner.rotation, .05 );
-		}
-		if (BobGE.inst.keysDown[38]) {
-		  // Up cursor key
-		  this.pitch += -.05;
-		  //quat.rotateX(this.owner.rotation, this.owner.rotation, -.05 );
-		}
-		if (BobGE.inst.keysDown[40]) {			
-		  // Down cursor key
-		  this.pitch += .05;
-		  //quat.rotateX(this.owner.rotation, this.owner.rotation, .05 );
-		}*/
 		 
 		var q = quat.create();
 		quat.rotateX(this.owner.rotation, q, this.pitch);
@@ -84,27 +57,10 @@ var BasicCameraController = Component.extend(
 		var iq = quat.create();
 		var cd = vec3.fromValues(0, 0, -1);
 		quat.invert(iq, this.owner.rotation);
-		vec3.transformQuat(this.owner.dir, cd, iq)
-		
-		/*if(BobGE.inst.mouseDeltaX != 0)
-			quat.rotateY(this.owner.rotation, this.owner.rotation, .05 * BobGE.inst.mouseDeltaX);
-		if(BobGE.inst.mouseDeltay != 0)
-			quat.rotateX(this.owner.rotation, this.owner.rotation, .05 * BobGE.inst.mouseDeltaY);*/
-	
+		vec3.transformQuat(this.owner.dir, cd, iq)		
 	}
 });
 
-//Basic Camera Controller + Pl
-var PlayerCameraController = Class.extend(
-{
-	update: function()
-	{
-		if(BobGE.inst.mouseDown)
-		{
-			
-		}
-	}
-});
 
 /**
 *  Constant Euler style rotations.
@@ -137,16 +93,32 @@ var ConstantMovementComponent = Component.extend({
 		//set rotations with defaulting
 		this.x = typeof x != 'undefined' ? x : 0;
 		this.y = typeof x != 'undefined' ? y : 0;
-		this.z = typeof x != 'undefined' ? z : 0;		
-		//document.onkeyup = handleKeyUp.bind(this);
+		this.z = typeof x != 'undefined' ? z : 0;	
+	},
+	update: function(elapsed)
+	{
+		var s = (elapsed / 1000.0);
+		//apply the appropriate amoutn of rotation based on elapsed time.
+		this.owner.position[0] += this.x * s;	
+		this.owner.position[1] += this.y * s;	
+		this.owner.position[2] += this.z * s;	
+		this.owner.dirty = true;
+	}
+});
+
+var destroyAfterDelay = Component.extend({
+	init: function(ttl)
+	{	
+		this._super();
+		//set Time to Live
+		this.ttl = ttl ? ttl : 5;			
 	},
 	update: function(elapsed)
 	{
 		//apply the appropriate amoutn of rotation based on elapsed time.
-		this.owner.position[0] += this.x;	
-		this.owner.position[1] += this.y;	
-		this.owner.position[2] += this.z;	
-		this.owner.dirty = true;
+		this.ttl -= (elapsed / 1000.0)	
+		if(this.ttl <= 0)
+			BobGE.inst.removeObject(this.owner);
 	}
 });
 
@@ -239,10 +211,22 @@ var TexturedMeshComponent = Component.extend({
 		//Draw the object
 		this.gl.drawElements(this.gl.TRIANGLES, this.triangleBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
 	},
+	clean:function()
+	{
+		var tex = this.textureSrc;
+		var tid = BobGE.inst.textureInstanceDictionaries[this.__proto__.id];
+		for(var i = 0; i < tid[tex].length; i++)
+		{
+			if(tid[tex][i] == this)
+			{
+				tid[tex].splice(i, 1);//remove from static texture renderer
+			}
+		}
+	},
 	loadTexture: function(tex, id)
 	{
 		var tid = BobGE.inst.textureInstanceDictionaries[id];
-		
+		this.textureSrc = tex;
 		if(!tid[tex])
 			tid[tex] = new Array();
 		tid[tex][tid[tex].length] = this;

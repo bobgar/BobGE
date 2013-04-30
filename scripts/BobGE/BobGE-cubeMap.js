@@ -1,13 +1,14 @@
 var CubeMap = Component.extend(
 {	
-	init: function(chunkXSize, chunkYSize, chunkZSize, chunkDrawDistance, seed)
+	init: function(chunkXSize, chunkYSize, chunkZSize, chunkDrawDistance, seed, perlinScale)
 	{
 		this.perlin = new SimplexNoise();
 		this.gl = BobGE.inst.gl;
-		this.chunkXSize = chunkXSize ? chunkXSize : 32;
-		this.chunkYSize = chunkYSize ? chunkYSize : 32;
-		this.chunkZSize = chunkXSize ? chunkZSize : 32;
-		this.chunkDrawDistance = chunkDrawDistance ? chunkDrawDistance : 3
+		this.chunkXSize = chunkXSize ? chunkXSize : 16;
+		this.chunkYSize = chunkYSize ? chunkYSize : 64;
+		this.chunkZSize = chunkZSize ? chunkZSize : 16;
+		this.perlinScale = perlinScale ? perlinScale : 32;
+		this.chunkDrawDistance = chunkDrawDistance ? chunkDrawDistance : 5
 		this.seed = seed ? seed : Math.random();
 		//TODO an associative array is not the ideal way to store this.
 		this.chunkMap = new Object();
@@ -75,6 +76,8 @@ var CubeMap = Component.extend(
 	{	
 		var v1 = vec3.create();
 		vec3.add(v1, c.position, BobGE.inst.mainCamera.position);
+		if(vec3.length(v1) < 4)//If the object is very close we render it anyway.
+			return true;
 		vec3.normalize(v1, v1);
 		var rd = Math.asin(vec3.dot(v1, BobGE.inst.mainCamera.dir)) ;
 		return rd > .75;
@@ -190,74 +193,45 @@ var CubeMap = Component.extend(
 		this.loaded = true;		
 	},
 	
-	/**
-	*  getShader is a helper function used to find and compile the vertex and fragment shaders
-	**/
-	getShader: function(id) {
-		log("Get Shaders!");
-		//Assume the shaders we're looking for are on the main dom object.  Get them by ID
-		var shaderScript = document.getElementById(id);
-		//If not found, return null
-		if (!shaderScript) {
-			log("Shader not found: " + id);
-			return null;
-		}
-		var shader;
-		//Figure out what kind of shader we have, and create the type appropriately
-		if (shaderScript.type == "x-shader/x-fragment") {
-			log("Found Fragment Shader!");
-			shader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
-		} else if (shaderScript.type == "x-shader/x-vertex") {
-			log("Found Vertex Shader!");
-			shader = this.gl.createShader(this.gl.VERTEX_SHADER);
-		} else {		
-			return null;
-		}
-		//strip out unnecessary bits from the source.
-		var str = "";
-		var k = shaderScript.firstChild;
-		while (k) {
-			if (k.nodeType == 3) {
-				str += k.textContent;
-			}
-			k = k.nextSibling;
-		}
-		//define the source and compile the shader
-		this.gl.shaderSource(shader, str);
-		this.gl.compileShader(shader);
-		if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
-			log(this.gl.getShaderInfoLog(shader));
-			return null;
-		}
-		return shader;
-	},
-	initShaders: function(){
-		log("Init Shaders!");
-		var fragmentShader = this.getShader("shader-fs");
-		var vertexShader = this.getShader("shader-cube-vs");
-
-		this.shaderProgram = this.gl.createProgram();
-		this.gl.attachShader(this.shaderProgram, vertexShader);
-		this.gl.attachShader(this.shaderProgram, fragmentShader);
-		this.gl.linkProgram(this.shaderProgram);
-
-		if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
-			log("Could not initialise shaders");
-		}
-
-		this.gl.useProgram(this.shaderProgram);
-
-		this.shaderProgram.vertexPositionAttribute = this.gl.getAttribLocation(this.shaderProgram, "aVertexPosition");
-		this.gl.enableVertexAttribArray(this.shaderProgram.vertexPositionAttribute);
+	testCollision: function(pos)
+	{
 		
-		this.shaderProgram.textureCoordAttribute = this.gl.getAttribLocation(this.shaderProgram, "aTextureCoord");
-        this.gl.enableVertexAttribArray(this.shaderProgram.textureCoordAttribute);
-
-		this.shaderProgram.uTransUniform = this.gl.getUniformLocation(this.shaderProgram, "uTrans");
-		this.shaderProgram.pMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uPMatrix");
-		this.shaderProgram.mvMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uMVMatrix");
-		this.shaderProgram.samplerUniform = this.gl.getUniformLocation(this.shaderProgram, "uSampler");
+		var x = (Math.floor((pos[0] / 2.0 )) % this.chunkXSize);
+		x = x < 0 ? this.chunkXSize+x : x;
+		var y = Math.floor((pos[1]) / 2.0 );		
+		var z = (Math.floor((pos[2] / 2.0 ) ) % this.chunkZSize);
+		z = z < 0 ? this.chunkZSize+z : z;
+		
+		var cx = Math.floor(pos[0] / (2 * this.chunkXSize));
+		var cz = Math.floor(pos[2] / (2 * this.chunkZSize));
+		
+		if(y >= (this.chunkYSize))
+			return false;
+		else if(y < 0)
+			return true;
+		else if(this.chunkMap[cx+","+cz].chunk[x][y][z].blockType == -1)		
+			return false;
+			
+		return true;
 	},
+	
+	getBlockAtPosition: function(pos)
+	{
+		var x = (Math.floor(((pos[0] + 1) / 2.0 )) % this.chunkXSize);
+		x = x < 0 ? this.chunkXSize+x : x;
+		var y = Math.floor((pos[1] + 1) / 2.0 );		
+		var z = (Math.floor(((pos[2] + 1) / 2.0 ) ) % this.chunkZSize) ;
+		z = z < 0 ? this.chunkZSize+z : z;
+		
+		var cx = Math.floor(pos[0] / (2 * this.chunkXSize));
+		var cz = Math.floor(pos[2] / (2 * this.chunkZSize));
+		
+		if(y >= (this.chunkYSize))
+			return undefined;
+		else if(y < 0)
+			return undefined;
+		return this.chunkMap[cx+","+cz].chunk[x][y][z];
+	}
 });
 
 var CubeMapChunk = Class.extend(
@@ -271,8 +245,6 @@ var CubeMapChunk = Class.extend(
 		this.ySize = ySize;
 		this.zSize = zSize;
 		
-		
-		
 		this.chunk = new Array(xSize);
 		for(var i = 0; i < this.xSize; ++i)
 		{
@@ -282,7 +254,7 @@ var CubeMapChunk = Class.extend(
 				this.chunk[i][j] = new Array(zSize);
 				for(var k = 0; k < this.zSize; ++k)
 				{
-					var t = this.cubeMap.perlin.noise3d(i/this.xSize + this.x, j / this.ySize, k/this.zSize + this.z) + (j / this.ySize);
+					var t = this.cubeMap.perlin.noise3d((i + this.x * this.xSize) / this.cubeMap.perlinScale, j / this.cubeMap.perlinScale, (k + this.z * this.zSize) / this.cubeMap.perlinScale ) + (j / this.ySize) ;
 					if(t < -.2)
 						this.chunk[i][j][k] = new CubeMapCube(this, i,j,k);
 					else
@@ -353,13 +325,21 @@ var CubeMapChunk = Class.extend(
 					else //This is to check for previously generated chunks bordering this one, since they will need to update visibility on edges which couldn't be done before.
 					{
 						if(x+1 >= this.xSize && this.cubeMap.chunkMap[(this.x+1) +","+ this.z] && this.cubeMap.chunkMap[(this.x+1) +","+ this.z].chunk[0][y][z].blockType == -1 )
-							this.chunk[x][y][z].addVisibleEdge();
+						{
+							this.chunk[x][y][z].addVisibleEdge();							
+						}
 						if(x-1 < 0 && this.cubeMap.chunkMap[(this.x-1) +","+ this.z] && this.cubeMap.chunkMap[(this.x-1) +","+ this.z].chunk[this.xSize-1][y][z].blockType == -1 )
+						{
 							this.chunk[x][y][z].addVisibleEdge();
-						if(z+1 >= this.ySize && this.cubeMap.chunkMap[this.x+","+(this.z+1)] && this.cubeMap.chunkMap[this.x+","+(this.z+1)].chunk[x][y][0].blockType == -1 )
+						}
+						if(z+1 >= this.zSize && this.cubeMap.chunkMap[this.x+","+(this.z+1)] && this.cubeMap.chunkMap[this.x+","+(this.z+1)].chunk[x][y][0].blockType == -1 )
+						{
 							this.chunk[x][y][z].addVisibleEdge();
+						}
 						if(z-1 < 0 && this.cubeMap.chunkMap[this.x+","+(this.z-1)] && this.cubeMap.chunkMap[this.x+","+(this.z-1)].chunk[x][y][this.zSize-1].blockType == -1 )
+						{
 							this.chunk[x][y][z].addVisibleEdge();
+						}
 					}
 				}
 			}
@@ -384,7 +364,7 @@ var CubeMapChunk = Class.extend(
 			this.removeFromVisible(c);
 		c.blockType = -1;
 		
-		if(x+1 < this.xSize)
+		/*if(x+1 < this.xSize)
 			this.chunk[x+1][y][z].addVisibleEdge();
 		if(x-1 >= 0)
 			this.chunk[x-1][y][z].addVisibleEdge();
@@ -395,7 +375,62 @@ var CubeMapChunk = Class.extend(
 		if(z+1 < this.zSize)
 			this.chunk[x][y][z+1].addVisibleEdge();
 		if(z-1 >= 0)
+			this.chunk[x][y][z-1].addVisibleEdge();*/
+			
+		if(x+1 < this.xSize)
+			this.chunk[x+1][y][z].addVisibleEdge();
+		else if(this.cubeMap.chunkMap[(this.x+1) +","+ this.z]) //if the cubemap at x+1 exists
+			this.cubeMap.chunkMap[(this.x+1) +","+ this.z].chunk[0][y][z].addVisibleEdge();
+		if(x-1 >= 0)
+			this.chunk[x-1][y][z].addVisibleEdge();
+		else if(this.cubeMap.chunkMap[(this.x-1) +","+ this.z]) //if the cubemap at x+1 exists
+			this.cubeMap.chunkMap[(this.x-1) +","+ this.z].chunk[this.xSize-1][y][z].addVisibleEdge();
+			
+		if(y+1 < this.ySize)
+			this.chunk[x][y+1][z].addVisibleEdge();					
+		if(y-1 >= 0)
+			this.chunk[x][y-1][z].addVisibleEdge();						
+			
+		if(z+1 < this.zSize)
+			this.chunk[x][y][z+1].addVisibleEdge();
+		else if(this.cubeMap.chunkMap[this.x+","+(this.z+1)]) //if the cubemap at x+1 exists
+			this.cubeMap.chunkMap[this.x+","+(this.z+1)].chunk[x][y][0].addVisibleEdge();		
+		if(z-1 >= 0)
 			this.chunk[x][y][z-1].addVisibleEdge();
+		else if(this.cubeMap.chunkMap[this.x+","+(this.z-1)]) //if the cubemap at x+1 exists
+			this.cubeMap.chunkMap[this.x+","+(this.z-1)].chunk[x][y][this.zSize-1].addVisibleEdge();	
+	},
+	addBlock: function(b, x,y,z)
+	{
+		var c = this.chunk[x][y][z];
+		if(c.blockType != -1)
+			return;
+		
+		c.blockType = b;
+		this.addToVisible(c);
+		
+		if(x+1 < this.xSize)
+			this.chunk[x+1][y][z].removeVisibleEdge();
+		else if(this.cubeMap.chunkMap[(this.x+1) +","+ this.z]) //if the cubemap at x+1 exists
+			this.cubeMap.chunkMap[(this.x+1) +","+ this.z].chunk[0][y][z].removeVisibleEdge();
+		if(x-1 >= 0)
+			this.chunk[x-1][y][z].removeVisibleEdge();
+		else if(this.cubeMap.chunkMap[(this.x-1) +","+ this.z]) //if the cubemap at x+1 exists
+			this.cubeMap.chunkMap[(this.x-1) +","+ this.z].chunk[this.xSize-1][y][z].removeVisibleEdge();
+			
+		if(y+1 < this.ySize)
+			this.chunk[x][y+1][z].removeVisibleEdge();					
+		if(y-1 >= 0)
+			this.chunk[x][y-1][z].removeVisibleEdge();						
+			
+		if(z+1 < this.zSize)
+			this.chunk[x][y][z+1].removeVisibleEdge();
+		else if(this.cubeMap.chunkMap[this.x+","+(this.z+1)]) //if the cubemap at x+1 exists
+			this.cubeMap.chunkMap[this.x+","+(this.z+1)].chunk[x][y][0].removeVisibleEdge();		
+		if(z-1 >= 0)
+			this.chunk[x][y][z-1].removeVisibleEdge();
+		else if(this.cubeMap.chunkMap[this.x+","+(this.z-1)]) //if the cubemap at x+1 exists
+			this.cubeMap.chunkMap[this.x+","+(this.z-1)].chunk[x][y][this.zSize-1].removeVisibleEdge();	
 	}
 });
 
@@ -404,6 +439,10 @@ var CubeMapCube = Class.extend(
 	init: function(chunk, x, y, z, blockType)
 	{
 		this.chunk = chunk;
+		this.x = x;
+		this.y = y;
+		this.z = z;
+		
 		//this.pos = vec3.create(x,y,z);
 		this.position = vec3.fromValues((x+chunk.x*(chunk.xSize))*2,y*2,(z+chunk.z*(chunk.zSize))*2);
 		this.blockType = blockType ? blockType : 0;
@@ -425,6 +464,291 @@ var CubeMapCube = Class.extend(
 		{
 			this.chunk.addToVisible(this);
 		}
+	},
+	removeVisibleEdge: function()
+	{
+		this.visibleEdges --;
+		if(this.visibleEdges == 0 && this.blockType != -1)
+			this.chunk.removeFromVisible(this);
+	}
+});
+
+var CubeMapPlayerController = Component.extend(
+{
+	init: function()
+	{		
+		this.numFired = 0;
+		this.pitch = 0;
+		this.yaw = 0;
+		this.speed = 30; //per second		
+		
+		this.xp = vec3.fromValues(1,0,0);
+		this.yp = vec3.fromValues(0,1,0);
+		this.zp = vec3.fromValues(0,0,1);
+		
+		BobGE.inst.mouseUpListeners[BobGE.inst.mouseUpListeners.length] = this.onMouseUp.bind(this);
+		BobGE.inst.mouseDownListeners[BobGE.inst.mouseDownListeners.length] = this.onMouseDown.bind(this);
+		
+		this._super();
+	},
+	update: function(elapsed)
+	{			
+		var ms = this.speed * (elapsed / 1000.0);
+	
+		var q = quat.create();
+		//We calculate negative camera position for purpose of checking collisions
+		var ncp = vec3.create();		
+		//quat.rotateY(q, q, -this.yaw);
+		quat.invert(q, this.owner.rotation);
+		if (BobGE.inst.keysDown[87]) 
+		{
+			var movement = vec3.fromValues(0, 0, ms);
+			vec3.transformQuat(movement, movement, q);
+			
+			vec3.add(this.owner.position, this.owner.position, movement);
+			//log("x: "+this.owner.position[0]+" y: "+this.owner.position[1]+" z: "+this.owner.position[2]);
+			vec3.negate(ncp, this.owner.position);
+			if(CubeMap.inst.testCollision(ncp))
+				vec3.sub(this.owner.position, this.owner.position, movement);
+		}
+		if (BobGE.inst.keysDown[83]) 
+		{
+			var movement = vec3.fromValues(0, 0, -ms);
+			vec3.transformQuat(movement, movement, q);			
+			vec3.add(this.owner.position, this.owner.position, movement);
+			vec3.negate(ncp, this.owner.position);
+			if(CubeMap.inst.testCollision(ncp))
+				vec3.sub(this.owner.position, this.owner.position, movement);
+		}
+		if (BobGE.inst.keysDown[65]) 
+		{
+			var movement = vec3.fromValues(ms, 0, 0);
+			vec3.transformQuat(movement, movement, q);			
+			vec3.add(this.owner.position, this.owner.position, movement);
+			vec3.negate(ncp, this.owner.position);
+			if(CubeMap.inst.testCollision(ncp))
+				vec3.sub(this.owner.position, this.owner.position, movement);
+		}
+		if (BobGE.inst.keysDown[68]) 
+		{
+			var movement = vec3.fromValues(-ms, 0, 0);
+			vec3.transformQuat(movement, movement, q);			
+			vec3.add(this.owner.position, this.owner.position, movement);
+			vec3.negate(ncp, this.owner.position);
+			if(CubeMap.inst.testCollision(ncp))
+				vec3.sub(this.owner.position, this.owner.position, movement);
+		}
+		
+		if(BobGE.inst.middleButtonDown)
+		{			
+			this.yaw += BobGE.inst.mouseDeltaX * .01;
+			this.yaw = this.yaw % 6.283
+			this.pitch += BobGE.inst.mouseDeltaY * .01;
+			this.pitch = this.pitch % 6.283
+		}		
+		 
+		var q = quat.create();
+		quat.rotateX(this.owner.rotation, q, this.pitch);
+		quat.rotateY(this.owner.rotation, this.owner.rotation, this.yaw);
+		
+		var iq = quat.create();
+		var cd = vec3.fromValues(0, 0, -1);
+		quat.invert(iq, this.owner.rotation);
+		vec3.transformQuat(this.owner.dir, cd, iq)		
+		
+		/*if(BobGE.inst.rightButtonDown)
+		{
+			var c = this.firstCubeContact();
+			if(c)
+				c.chunk.removeBlock(c.x, c.y, c.z);
+		}
+		if(BobGE.inst.leftButtonDown)
+		{
+			var c = this.lastEmptyCube();
+			if(c)
+				c.chunk.addBlock(0, c.x, c.y, c.z);
+		}*/
+	},
+	
+	onMouseDown: function()
+	{
+	},
+	
+	onMouseUp: function(event)
+	{
+		switch(event.button)
+		{
+			case 0:
+				/*var go = new GameObject("fired block" + this.numFired)
+				go.addComponent(new destroyAfterDelay(3));				
+				var ncp = vec3.create();
+				vec3.negate(ncp, this.owner.position);
+				go.position = ncp;				
+				go.scale[0] = .25;go.scale[1] = .25;go.scale[2] = .25;				
+				var mv = BobGE.inst.mouseToRay();				
+				var cmc = new ConstantMovementComponent();				
+				cmc.x = mv[0] * 20; cmc.y = mv[1]* 20; cmc.z = mv[2]* 20; 
+				go.addComponent(cmc);				
+				var tc = new TexturedCubeComponent();
+				tc.loadTexture("Assets/Water.jpg");
+				go.addComponent(tc);				
+				BobGE.inst.addObject(go);
+				this.numFired ++;*/
+				var c = this.lastEmptyCube();
+				if(c)
+					c.chunk.addBlock(0, c.x, c.y, c.z);
+				break;
+			case 2:
+				var c = this.firstCubeContact();
+				if(c)
+					c.chunk.removeBlock(c.x, c.y, c.z);
+				break;
+			default:
+				break;
+		}
+	},
+	lastEmptyCube : function()
+	{
+		var ncp = vec3.create();
+		vec3.negate(ncp, this.owner.position);
+		
+		var mv = BobGE.inst.mouseToRay();
+		vec4.scale(mv, mv, .25);
+		
+		var i = 0;
+		for(var i = 0; i < 80; ++i)
+		{
+			vec3.add(ncp, ncp, mv);
+			var c = CubeMap.inst.getBlockAtPosition(ncp);
+			if(c != undefined && c.blockType != -1)
+			{
+				vec3.sub(ncp, ncp, mv);
+				var c = CubeMap.inst.getBlockAtPosition(ncp);
+				return c;
+			}
+		}
+	},
+	
+	firstCubeContact: function()
+	{
+		var ncp = vec3.create();
+		vec3.negate(ncp, this.owner.position);
+		
+		var mv = BobGE.inst.mouseToRay();
+		vec4.scale(mv, mv, .25);
+		
+		var i = 0;
+		for(var i = 0; i < 80; ++i)
+		{
+			vec3.add(ncp, ncp, mv);
+			var c = CubeMap.inst.getBlockAtPosition(ncp);
+			if(c != undefined && c.blockType != -1)
+				return c;
+		}
+	
+		/*
+		//We calculate negative camera position for purpose of checking collisions
+		var ncp = vec3.create();
+		vec3.negate(ncp, this.owner.position);
+		
+		var cp = vec3.create(); //current position
+		var sr = vec3.create(); //scaled ray
+		
+		//If we're inside a cube, we return that one!
+		//NOTE this shouldn't ever happen.
+		var c = CubeMap.inst.getBlockAtPosition(ncp);
+		if(c != undefined && c.blockType != -1)
+			return c;
+		
+		var q = quat.create();
+		var mv = BobGE.inst.mouseToRay();
+		
+		//planar shift for each plane after determining intersection
+		var dxp = mv[0] > 0 ? 2 : -2;
+		var dyp = mv[1] > 0 ? 2 : -2;
+		var dzp = mv[2] > 0 ? 2 : -2;		
+		//Last found distance in each planar direction.
+		var dtcxp = 0;
+		var dtcyp = 0;
+		var dtczp = 0;
+		
+		var xpp = vec3.create();
+		var ypp = vec3.create();
+		var zpp = vec3.create();
+		
+		//plane points
+		xpp[0] = mv[0] > 0 ? Math.floor(ncp[0]/2.0)*2 + 1 : Math.ceil(ncp[0]/2.0)*2 - 1;
+		ypp[1] = mv[1] > 0 ? Math.floor(ncp[1]/2.0)*2 + 1 : Math.ceil(ncp[1]/2.0)*2 - 1;
+		zpp[2] = mv[2] > 0 ? Math.floor(ncp[2]/2.0)*2 + 1 : Math.ceil(ncp[2]/2.0)*2 - 1;
+		
+		var curCube;
+		
+		while(Math.abs(dtcxp) < 20 || Math.abs(dtcyp) < 20 || Math.abs(dtczp) < 20)
+		{
+			if(Math.abs(dtcxp) <= Math.abs(dtcyp) && Math.abs(dtcxp) <= Math.abs(dtczp))
+			{
+				dtcxp = BobGE.inst.planeRayIntersection(xpp , this.xp, ncp, mv);
+				if(dtcxp == NaN)
+				    dtcxp = 99999;
+				else
+				{
+					if(Math.abs(dtcxp) <= 20)
+					{
+						vec3.scale(sr, mv, dtcxp);//calculate the total vector to the intersection
+						vec3.add(cp, ncp, sr);//move from the initial ray point to the intersection
+						cp[0] = Math.round(cp[0])
+						var c = CubeMap.inst.getBlockAtPosition(cp);	
+						log("x point tested " + cp[0] + "," + cp[1] + "," +cp[2]);						
+						if(c && c.blockType != -1 && (curCube == undefined || curCube.d >= Math.abs(dtcxp)))
+							curCube = {c : CubeMap.inst.getBlockAtPosition(cp), d : Math.abs(dtcxp)};						
+					}
+					xpp[0] += dxp;
+				}
+			}			
+			else if(Math.abs(dtcyp) < Math.abs(dtczp))
+			{
+				dtcyp = BobGE.inst.planeRayIntersection(ypp , this.yp, ncp, mv);
+				if(dtcyp == NaN)
+				    dtcyp = 99999;
+				else
+				{					
+					if(Math.abs(dtcyp) <= 20)
+					{
+						vec3.scale(sr, mv, dtcyp);//calculate the total vector to the intersection						
+						vec3.add(cp, ncp, sr);//move from the initial ray point to the intersection
+						cp[1] = Math.round(cp[1]) ;
+						var c = CubeMap.inst.getBlockAtPosition(cp);
+						log("y point tested " + cp[0] + "," + cp[1] + "," +cp[2]);
+						if(c && c.blockType != -1 && (curCube == undefined || curCube.d >= Math.abs(dtcyp)))
+							curCube = {c : c, d : Math.abs(dtcyp)};						
+					}
+					ypp[1] += dyp;
+				}
+			}
+			else
+			{
+				dtczp = BobGE.inst.planeRayIntersection(zpp , this.zp, ncp, mv);
+				if(dtczp == NaN)
+				    dtczp = 99999;
+				else
+				{					
+					if(Math.abs(dtczp) <= 20)
+					{
+						vec3.scale(sr, mv, dtczp);//calculate the total vector to the intersection						
+						vec3.add(cp, ncp, sr);//move from the initial ray point to the intersection
+						cp[2] = Math.round(cp[2]) ;
+						var c = CubeMap.inst.getBlockAtPosition(cp);
+						log("z point tested " + cp[0] + "," + cp[1] + "," +cp[2]);
+						if(c && c.blockType != -1 && (curCube == undefined || curCube.d >= Math.abs(dtczp)))
+							curCube = {c : c, d : Math.abs(dtczp)};						
+					}
+					zpp[2] += dzp;
+				}				
+			}
+		}
+		if(curCube)
+			return curCube.c;
+		return curCube;*/
 	}
 });
 

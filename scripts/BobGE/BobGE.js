@@ -11,6 +11,8 @@ var BobGE = Class.extend(
 			return BobGE.inst;
 		BobGE.inst = this;
 		
+		this.viewAngle = (Math.PI/4.0);
+		this.canvas = canvas;
 		//set up the default framerate in miliseconds
 		this.maxFramerate = 1000.0 / 60.0; 
 		//set last render and update times to 0 so they happen immedately
@@ -52,7 +54,9 @@ var BobGE = Class.extend(
 		
 		canvas.onmousedown = this.onMouseDown.bind(this);
 		document.onmouseup = this.onMouseUp.bind(this);
-		document.onmousemove = this.onMouseMove.bind(this);		
+		document.onmousemove = this.onMouseMove.bind(this);	
+		this.mouseDownListeners = new Array();
+		this.mouseUpListeners = new Array();
 		
 		//Mouse deltas should start at 0
 		this.mouseDeltaX = 0;
@@ -94,13 +98,43 @@ var BobGE = Class.extend(
 	**/
 	onMouseDown: function(event)
 	{
-		this.mouseDown = true;
+		switch(event.button)
+		{
+			case 0:
+				this.leftButtonDown = true;
+				break;
+			case 1:
+				this.middleButtonDown = true;
+				break;
+			case 2:
+				this.rightButtonDown = true;
+				break;
+		}
+		
+		for(var i = 0; i < this.mouseDownListeners.length; ++i)
+			this.mouseDownListeners[0](event);
+		//this.mouseDown = true;
 	},
 	onMouseUp: function(event)
 	{
-		this.mouseDown = false;
+		switch(event.button)
+		{
+			case 0:
+				this.leftButtonDown = false;
+				break;
+			case 1:
+				this.middleButtonDown = false;
+				break;
+			case 2:
+				this.rightButtonDown = false;
+				break;
+		}
+		
+		for(var i = 0; i < this.mouseUpListeners.length; ++i)
+			this.mouseUpListeners[0](event);
+		/*this.mouseDown = false;
 		this.lastMouseX = undefined
-		this.lastMouseY = undefined
+		this.lastMouseY = undefined*/
 	},
 	onMouseMove: function(event)
 	{		
@@ -123,6 +157,13 @@ var BobGE = Class.extend(
 	},
 	removeObject: function(o)
 	{
+		var o = this.objects[o.id];
+		for(var i = 0; i < o.components.length; i++)
+		{
+			var c = o.components[i];
+			if(c.clean)
+				c.clean();
+		}
 		delete this.objects[o.id];
 	},
 	/**
@@ -253,7 +294,34 @@ var BobGE = Class.extend(
 		
 		this.gl.activeTexture(this.gl.TEXTURE0);
 	},
-	
+	mouseToRay: function()
+	{	
+		/*var xa = (this.gl.viewportWidth / this.gl.viewportHeight);
+		var xViewAngle = this.viewAngle * xa;
+		var xfc = -(this.lastMouseX - (this.gl.viewportWidth / 2.0))//x from center
+		var yfc = -(this.lastMouseY - (this.gl.viewportHeight / 2.0))//y from center
+		var yaw = (xViewAngle * (xfc / this.gl.viewportWidth));
+		var pitch = this.viewAngle * (yfc / this.gl.viewportHeight);		
+		
+		return {pitch: pitch, yaw: yaw};*/
+		var mc = vec4.fromValues( this.lastMouseX * 2 / this.gl.viewportWidth - 1, 1 - this.lastMouseY * 2 / this.gl.viewportHeight, 0, 1);
+		
+		var p = mat4.create();
+		mat4.perspective(p, this.viewAngle, this.gl.viewportWidth / this.gl.viewportHeight, 0.1, 1000.0);		
+		
+		var c = mat4.create();		
+		mat4.fromQuat(c, this.mainCamera.rotation);
+		
+		mat4.mul(c, p, c);
+		mat4.invert(c, c);
+		vec4.transformMat4(mc, mc, c);
+		
+		mc[3] = 0;
+		vec4.normalize(mc, mc);
+		
+		return mc;
+	}
+	,
 	/**
 	*  Draw the entire object list.
 	*  TODO:  Draw method should be on drawable components.
@@ -263,15 +331,15 @@ var BobGE = Class.extend(
 	drawScene: function() 
 	{
 		//Clear the screen and reset the depth budffer before drawin the game world
-		this.gl.clearColor(0.5, 0.5, 0.5, 1.0);
+		this.gl.clearColor(0.7, 0.7, .9, 1.0);
 		this.gl.enable(this.gl.DEPTH_TEST);			
-		//Create the temp matricies to hold object positions.
-		var mvMatrix = mat4.create();
-		var pMatrix = mat4.create();
+		//Create the temp matricies to hold object positions.		
 		this.gl.viewport(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 		//Generate the perspective matrix
-		mat4.perspective(pMatrix, 45, this.gl.viewportWidth / this.gl.viewportHeight, 0.1, 1000.0);		
+		var mvMatrix = mat4.create();
+		var pMatrix = mat4.create();
+		mat4.perspective(pMatrix, this.viewAngle, this.gl.viewportWidth / this.gl.viewportHeight, 0.1, 1000.0);		
 		//log("num objects = "+this.objects.length);
 		
 		var cameraMatrix = mat4.create();
@@ -307,6 +375,14 @@ var BobGE = Class.extend(
 				}
 			}
 		}*/
+	},
+	
+	planeRayIntersection: function(planePoint, norm, rayPoint, ray)
+	{
+		var p = vec3.create();
+		vec3.sub( p, planePoint, rayPoint);
+		var s = vec3.dot(p, norm) / vec3.dot(ray , norm );	
+		return s;
 	}
 });
 
