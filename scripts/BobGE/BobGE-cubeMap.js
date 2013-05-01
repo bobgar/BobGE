@@ -196,14 +196,14 @@ var CubeMap = Component.extend(
 	testCollision: function(pos)
 	{
 		
-		var x = (Math.floor((pos[0] / 2.0 )) % this.chunkXSize);
+		var x = (Math.floor(( (pos[0] + 1) / 2.0 )) % this.chunkXSize);
 		x = x < 0 ? this.chunkXSize+x : x;
-		var y = Math.floor((pos[1]) / 2.0 );		
-		var z = (Math.floor((pos[2] / 2.0 ) ) % this.chunkZSize);
+		var y = Math.floor((pos[1] + 1) / 2.0 );		
+		var z = (Math.floor(((pos[2] + 1) / 2.0 ) ) % this.chunkZSize);
 		z = z < 0 ? this.chunkZSize+z : z;
 		
-		var cx = Math.floor(pos[0] / (2 * this.chunkXSize));
-		var cz = Math.floor(pos[2] / (2 * this.chunkZSize));
+		var cx = Math.floor((pos[0]+1) / (2 * this.chunkXSize));
+		var cz = Math.floor((pos[2]+1) / (2 * this.chunkZSize));
 		
 		if(y >= (this.chunkYSize))
 			return false;
