@@ -8,9 +8,9 @@ function webGLStart()
 	var bobGE = new BobGE(canvas);	
 	
 	bobGE.mainCamera.addComponent(new CubeMapPlayerController());
-	//bobGE.mainCamera.position[2] = -20;
-	//bobGE.mainCamera.position[1] = -80;
-	//bobGE.mainCamera.components[0].pitch = 1.1;
+	bobGE.mainCamera.position[2] = -20;
+	bobGE.mainCamera.position[1] = -80;
+	bobGE.mainCamera.components[0].pitch = 1.1;
 	
 	
 	var cubeMapObject = new GameObject("CubeMap");

@@ -5,7 +5,7 @@ var CubeMap = Component.extend(
 		this.perlin = new SimplexNoise();
 		this.gl = BobGE.inst.gl;
 		this.chunkXSize = chunkXSize ? chunkXSize : 16;
-		this.chunkYSize = chunkYSize ? chunkYSize : 64;
+		this.chunkYSize = chunkYSize ? chunkYSize : 32;
 		this.chunkZSize = chunkZSize ? chunkZSize : 16;
 		this.perlinScale = perlinScale ? perlinScale : 32;
 		this.chunkDrawDistance = chunkDrawDistance ? chunkDrawDistance : 5
@@ -218,13 +218,13 @@ var CubeMap = Component.extend(
 	getBlockAtPosition: function(pos)
 	{
 		var x = (Math.floor(((pos[0] + 1) / 2.0 )) % this.chunkXSize);
-		x = x < 0 ? this.chunkXSize+x : x;
+		x = x < 0 ? this.chunkXSize + x : x;
 		var y = Math.floor((pos[1] + 1) / 2.0 );		
 		var z = (Math.floor(((pos[2] + 1) / 2.0 ) ) % this.chunkZSize) ;
-		z = z < 0 ? this.chunkZSize+z : z;
+		z = z < 0 ? this.chunkZSize + z : z;
 		
-		var cx = Math.floor(pos[0] / (2 * this.chunkXSize));
-		var cz = Math.floor(pos[2] / (2 * this.chunkZSize));
+		var cx = Math.floor((pos[0]+1) / (2 * this.chunkXSize));
+		var cz = Math.floor((pos[2]+1) / (2 * this.chunkZSize));
 		
 		if(y >= (this.chunkYSize))
 			return undefined;
